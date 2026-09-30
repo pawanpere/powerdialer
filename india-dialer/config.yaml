@@ -103,3 +103,60 @@ scoring:
   mobile: 5                  # the lead has at least one mobile number
   named_dm: 10               # a person's name, not just a role, to ask for
   interested_before: 40      # an earlier call ended interested, sample or demo
+
+# ------------------------------------------------------- calling hours (IST) --
+# Cold dials only in power and soft windows. Callbacks the DM asked for and
+# sample follow-up calls may ring any time inside `hard`. Nothing, ever,
+# outside `hard` (TRAI hours). Sundays and holidays: no cold dials.
+calling:
+  power:   [["10:00", "13:00"], ["14:30", "17:30"]]
+  soft:    [["17:30", "18:30"]]
+  blocked: [["13:00", "14:30"]]          # lunch
+  hard:    ["09:00", "21:00"]
+  saturday_note: "Saturday: many plants work a half day"
+  # Gazetted holidays, October to December 2026. Add plant shutdowns (the
+  # days around Diwali, local festivals) as you learn them.
+  holidays:
+    - {date: 2026-10-02, name: Gandhi Jayanti}
+    - {date: 2026-10-20, name: Dussehra}
+    - {date: 2026-11-08, name: Diwali}
+    - {date: 2026-11-24, name: Guru Nanak Jayanti}
+    - {date: 2026-12-25, name: Christmas}
+
+# Up to 5 attempts over about two weeks. Never the same day on the same
+# number (another number from the lead is fine); mornings and afternoons
+# alternate; Sundays and holidays are skipped. After 5 attempts without ever
+# reaching the DM the lead is EXHAUSTED and moves to the WhatsApp / LinkedIn
+# only list.
+retry:
+  max_attempts: 5
+  gap_days: [1, 2, 3, 4]                 # days to wait after attempt 1, 2, 3, 4
+  alternate_halves: true
+
+dialing:
+  ring_no_answer_seconds: 40             # ringing this long with no "connected" suggests No answer
+  power_countdown_seconds: 5             # power mode: pause before the next lead's dial screen
+  callback_notify_minutes: 5             # browser notification this long before a callback is due
+  skip_hours: 2                          # a skipped lead comes back to the queue after this long
+
+# -------------------------------------------------------------- wrap-up --
+# Level 1, keys 1-9 then 0, in this order. Flags stamped onto the call row:
+#   connect     someone picked up                    (Connects)
+#   dm          the decision maker was on the line   (DMs reached)
+#   pitched     the DM heard the pitch               (DMs pitched)
+#   interested  they want to see it                  (Interested)
+#   sample      they agreed to send 5 drawings       (Samples asked)
+#   demo        a demo is booked                     (Demos booked)
+# kind: final | retry | callback | followup (opens a sample card) | dnc
+# SAMPLE_REQ, DEMO_BOOKED, CALLBACK, NO_ANSWER and DNC are load-bearing keys.
+outcomes:
+  - {key: SAMPLE_REQ,    label: Agreed to send 5 drawings,              kind: followup, connect: true,  dm: true, pitched: true, interested: true, sample: true, tone: good}
+  - {key: DEMO_BOOKED,   label: Demo booked,                            kind: final,    connect: true,  dm: true, pitched: true, interested: true, demo: true, tone: good}
+  - {key: CALLBACK,      label: Callback (DM asked),                    kind: callback, connect: true,  dm: true, pitched: true}
+  - {key: INTERESTED_NO, label: "Interested, no next step",             kind: retry,    connect: true,  dm: true, pitched: true, interested: true}
+  - {key: PITCHED_NO,    label: "Pitched, not a fit",                   kind: final,    connect: true,  dm: true, pitched: true}
+  - {key: GATEKEEPER,    label: Reception blocked or transferred nowhere, kind: retry,  connect: true}
+  - {key: DM_NOT_IN,     label: "DM not in, got a name or number",      kind: retry,    connect: true}
+  - {key: NO_ANSWER,     label: No answer / busy / switched off,        kind: retry,    connect: false}
+  - {key: BAD_NUMBER,    label: Wrong number / not in service,          kind: final,    connect: false}
+  - {key: DNC,           label: Asked not to call,                      kind: dnc,      connect: true, tone: danger}

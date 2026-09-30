@@ -20,8 +20,8 @@ ROLE_WORDS = {
     "assistant", "asst", "deputy", "associate", "contact", "india", "services", "centre", "center",
 }
 TIER_ORDER = {"A": 0, "B": 1, "C": 2}
-EM_DASH = "—"
-EN_DASH = "–"
+EM_DASH = "\u2014"
+EN_DASH = "\u2013"
 
 
 def clean(value):

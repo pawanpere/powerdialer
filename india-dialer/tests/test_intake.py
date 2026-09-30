@@ -47,7 +47,7 @@ class Fields(unittest.TestCase):
         self.assertEqual(intake.split_location("Pune, Maharashtra, India", states), ("Pune", "Maharashtra"))
 
     def test_em_dashes_never_reach_the_cockpit(self):
-        self.assertEqual(intake.clean("clients — confirm"), "clients, confirm")
+        self.assertEqual(intake.clean("clients \u2014 confirm"), "clients, confirm")
 
 
 class Rows(unittest.TestCase):
