@@ -187,3 +187,17 @@ pipeline:
     - {key: quote,     label: Quote sent}
     - {key: won,       label: Won}
     - {key: lost,      label: Lost}
+
+# Rate targets for the stats bar. At or above: good. Within 70% of it: warn.
+# Below that: bad. Rates on fewer than `min_base` calls stay grey.
+targets:
+  min_base: 10
+  rates:
+    - {key: connect_rate,  label: Connect rate,          num: connects,         den: dials,            target: 0.30}
+    - {key: dm_reach,      label: DM reach,              num: dms_reached,      den: connects,         target: 0.40}
+    - {key: pitch_rate,    label: Pitch rate,            num: pitched,          den: dials,            target: 0.15}
+    - {key: interest_rate, label: Interest rate,         num: interested,       den: pitched,          target: 0.30}
+    - {key: sample_rate,   label: Sample rate,           num: samples_asked,    den: dials,            target: 0.03, star: true}
+    - {key: follow_through, label: Sample follow-through, num: samples_received, den: samples_asked,   target: 0.60}
+    - {key: win_rate,      label: Win rate,              num: won,              den: samples_delivered, target: 0.25}
+  positive_conversations_per_day: 10

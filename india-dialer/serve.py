@@ -32,6 +32,7 @@ import common  # noqa: E402
 common.ensure_deps()
 
 import db  # noqa: E402
+import funnel  # noqa: E402
 import intake  # noqa: E402
 import phones  # noqa: E402
 import policy  # noqa: E402
@@ -262,6 +263,17 @@ class Handler(BaseHTTPRequestHandler):
         return self._api_get_more(route, agent, t)
 
     def _api_get_more(self, route, agent, t):
+        rng = self._q("range", "today")
+        rng = rng if rng in ("today", "week", "all", "yesterday") else "today"
+        script = self._q("script") or None
+        if route == "/api/stats":
+            session = self._q("session") or None
+            return self._json(funnel.stats(CFG, rng, script, int(session) if session and session.isdigit() else None,
+                                           detail=self._q("detail", "1") != "0"))
+        if route in ("/api/export/tracker.csv", "/api/export/calls.csv"):
+            body = (funnel.tracker_csv if "tracker" in route else funnel.calls_csv)(CFG, rng, script).encode("utf-8")
+            name = ("india-tracker" if "tracker" in route else "india-calls") + f"-{rng}-{policy.to_ist(t):%Y-%m-%d}.csv"
+            return self._send(200, body, "text/csv; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
         return self._err("not found", 404)
 
     # --------------------------------------------------------------- POST --

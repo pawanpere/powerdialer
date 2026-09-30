@@ -348,3 +348,16 @@ table.stat .good { color: var(--mint); } table.stat .warn { color: var(--marigol
   .discovery .wide { grid-column: auto; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Numbers: key/value lists, breakdown tables */
+.kv > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.kv .rv { white-space: nowrap; font-family: var(--mono); font-size: 13px; }
+.kv .rate.good { color: var(--mint); font-weight: 700; } .kv .rate.warn { color: var(--marigold); font-weight: 700; } .kv .rate.bad { color: var(--danger); font-weight: 700; }
+.dialog .kv > div { padding-left: 0; padding-right: 0; }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.h3 { font-size: 13px; font-weight: 700; margin: 18px 0 4px; }
+.bt { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bt th { text-align: right; font-weight: 400; color: var(--ink-3); padding: 5px 6px; border-bottom: 1px solid var(--ink); }
+.bt td { text-align: right; font-family: var(--mono); padding: 5px 6px; border-bottom: 1px solid var(--line); }
+.bt th:first-child, .bt td:first-child { text-align: left; font-family: var(--sans); }
+@media (max-width: 760px) { .cols2 { grid-template-columns: 1fr; } }
