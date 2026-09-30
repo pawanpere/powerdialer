@@ -36,8 +36,7 @@ def ensure_deps():
     if _have("yaml"):
         return                               # run on, with the stdlib number heuristic
     sys.exit("PyYAML is required. From the repo root run:\n"
-             "  python3 -m pip install -r requirements.txt\n"
-             "or: uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt")
+             "  python3 -m venv .venv && .venv/bin/pip install -r india-dialer/requirements.txt")
 
 
 def load_config(path=CONFIG_PATH):

@@ -133,7 +133,7 @@ body[data-state="wrap"] .lamp i { background: var(--coral-fill); }
                         font-size: 13.5px; text-align: left; text-decoration: none; color: var(--ink); }
 .menu button:hover, .menu a:hover { background: var(--sunken); }
 .menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
-.banner { padding: 8px 16px; font-size: 13.5px; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--marigold); }
+.banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; font-size: 13.5px; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--marigold); }
 .banner.danger { color: var(--danger); }
 
 /* ---------------------------------------------------------------- panes -- */
@@ -281,7 +281,7 @@ details.qa summary::-webkit-details-marker { display: none; }
 details.qa[open] summary { color: var(--ink); font-weight: 700; }
 details.qa p { padding: 0 0 9px; font-size: 14.5px; line-height: 1.55; }
 .branches { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-top: 14px; }
-.branches .btn { height: auto; min-height: 28px; padding: 4px 8px; margin-left: -8px; border-color: transparent; background: none; font-weight: 400; color: var(--ink-2); white-space: normal; text-align: left; }
+.branches .btn { display: block; height: auto; min-height: 28px; padding: 4px 8px; margin-left: -8px; border-color: transparent; background: none; font-weight: 400; color: var(--ink-2); white-space: normal; text-align: left; }
 .branches .btn:hover { background: var(--sunken); color: var(--ink); }
 .branches .btn::before { content: "\2192\00a0\00a0"; color: var(--ink-3); }
 .rules { margin: 14px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-3); line-height: 1.6; }
