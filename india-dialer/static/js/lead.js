@@ -46,6 +46,10 @@ export function renderLead() {
   const card = (l.samples || []).find((c) => ["won", "lost"].indexOf(c.stage) < 0);
   if (card) meta.push('<span class="flag">' + (card.kind === "demo" ? "Demo" : "Sample") + ": " + esc(stageName(card.stage)) + "</span>");
   if (l.referred_by_company) meta.push("referred by " + esc(l.referred_by_company));
+  const w = l.window || {};
+  if (w.day === "sunday" || w.day === "holiday") meta.push('<span class="flag">' + esc(w.day_note) + ": only callbacks they asked for</span>");
+  else if (w.day === "saturday") meta.push('<span class="flag">' + esc(w.day_note) + "</span>");
+  else if (w.legal && w.tier !== "power" && w.tier !== "soft") meta.push('<span class="flag">' + esc(w.label) + ", hand-picked</span>");
   if (l.flags && !l.held) meta.push('<span class="flag">Check: ' + esc(l.flags) + "</span>");
   $("c-meta").innerHTML = meta.join(" · ");
   $("c-company").textContent = l.company;
