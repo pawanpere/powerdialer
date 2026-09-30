@@ -65,7 +65,7 @@
 [hidden] { display: none !important; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--sans); font-variant-numeric: tabular-nums;
-       -webkit-font-smoothing: antialiased; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; height: 100dvh; overflow: hidden; }
+       -webkit-font-smoothing: antialiased; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; height: 100dvh; overflow: hidden; }
 h1, h2, h3, p, blockquote { margin: 0; }
 h2 { font-size: 13.5px; font-weight: 700; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -113,7 +113,7 @@ select.field { padding-right: 6px; }
 
 /* ------------------------------------------------------------------ top -- */
 .top { display: flex; align-items: center; gap: 16px; height: 50px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--bg); }
-.rail-toggle { display: none; }
+.rail-toggle, .script-toggle { display: none; }
 .lamp { display: inline-flex; align-items: center; gap: 8px; min-width: 96px; font-weight: 700; font-size: 14px; }
 .lamp i { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-3); }
 body[data-state="ringing"] .lamp i { background: var(--marigold-fill); }
@@ -342,6 +342,7 @@ table.stat .good { color: var(--mint); } table.stat .warn { color: var(--marigol
 @media (max-width: 1080px) {
   .panes { grid-template-columns: 300px minmax(0, 1fr); }
   .right { display: none; }
+  .script-toggle { display: inline-flex; }
   body.script-open .right { display: flex; position: fixed; z-index: 60; top: 50px; bottom: 46px; right: 0; width: min(390px, 92vw); background: var(--bg); }
 }
 @media (max-width: 760px) {
@@ -351,6 +352,9 @@ table.stat .good { color: var(--mint); } table.stat .warn { color: var(--marigol
   body.rail-open .rail { display: flex; position: fixed; z-index: 60; top: 50px; bottom: 46px; left: 0; width: min(340px, 94vw); background: var(--bg); }
   .dial { grid-template-columns: 1fr; }
   .clock-line, .session-line { display: none; }
+  .top { gap: 8px; padding: 0 12px; }
+  .lamp { min-width: 0; }
+  #b-help { display: none; }
   .grid2, .grid3, .outcomes, .discovery, .keys-table { grid-template-columns: 1fr; }
   .discovery .wide { grid-column: auto; }
 }

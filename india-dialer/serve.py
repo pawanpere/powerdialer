@@ -323,11 +323,16 @@ class Handler(BaseHTTPRequestHandler):
             return None
 
     def _allowed(self):
-        """Loopback is trusted. Anything else needs the LAN token."""
+        """Loopback is trusted. Anything else needs --lan, the LAN token, and
+        may only reach the phone page and its one feed: never the cockpit,
+        the lists or the exports."""
         host = self.client_address[0]
-        if host in ("127.0.0.1", "::1", "localhost"):
+        if host in ("127.0.0.1", "::1", "localhost", "::ffff:127.0.0.1"):
             return True
-        if not LAN["on"]:
+        if not LAN["on"] or self.command != "GET":
+            return False
+        route = urllib.parse.urlparse(self.path).path
+        if route not in ("/m", "/m/", "/api/m/current") and not route.startswith("/static/fonts/"):
             return False
         cookie = dict(p.strip().split("=", 1) for p in (self.headers.get("Cookie") or "").split(";") if "=" in p)
         return secrets.compare_digest(self._q("k") or cookie.get("k", ""), LAN["token"])

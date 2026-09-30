@@ -414,7 +414,8 @@ function wire() {
   });
   $("b-menu").addEventListener("click", (e) => { e.stopPropagation(); toggleMenu("main-menu", "b-menu"); });
   $("b-help").addEventListener("click", helpModal);
-  $("b-rail").addEventListener("click", () => document.body.classList.toggle("rail-open"));
+  $("b-rail").addEventListener("click", () => { document.body.classList.remove("script-open"); document.body.classList.toggle("rail-open"); });
+  $("b-script").addEventListener("click", () => { document.body.classList.remove("rail-open"); document.body.classList.toggle("script-open"); });
   $("e-acts").addEventListener("click", (e) => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const act = b.getAttribute("data-act");
