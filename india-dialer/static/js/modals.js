@@ -10,7 +10,7 @@ export const pauseReasons = () => (S.cfg && S.cfg.pause_reasons) || ["Break", "L
 const KEYS = [
   ["space", "Dial, then end the call"], ["c", "They picked up"], ["n", "No answer, log it"], ["t", "Try the next number"],
   ["1 to 9, 0", "Pick the outcome"], ["enter", "Save the suggested outcome"], ["z", "Undo the last save"], ["s", "Skip this lead for now"],
-  ["o", "Objections"], ["left, right", "Script step back, forward"], ["up, down", "Script branch"], ["h", "Hinglish on or off"],
+  ["o", "Objections"], ["left, right", "Script step back, forward"], ["h", "Hinglish on or off"],
   ["w", "WhatsApp message"], ["e", "Email"], ["b", "Book a demo"], ["p", "Start, pause or resume"],
   ["/", "Search the queue"], ["esc", "Close, or hold the countdown"], ["?", "This list"]
 ];

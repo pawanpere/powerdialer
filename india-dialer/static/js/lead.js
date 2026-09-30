@@ -1,7 +1,7 @@
 /* The lead card: who to call, the number in large type with a QR code for the
    phone camera, every other number to try next, and what is known so far. */
 import { $, esc, prettyPhone, parseUTC, istWhen, rel } from "./util.js";
-import { S, emit, actions, outcome } from "./state.js";
+import { S, on, emit, actions, outcome } from "./state.js";
 import { api } from "./api.js";
 import { toast } from "./ui.js";
 import { qrSvg } from "./qr.js";
@@ -147,6 +147,7 @@ export function wireLead() {
       toast("ok", "Cleared. You can dial " + esc(S.cur.company) + ".");
     });
   });
+  on("call", syncDiscovery);
   $("discovery").addEventListener("input", (e) => {
     const k = e.target.getAttribute("data-call");
     if (k) { S.call[k] = e.target.value.trim(); emit("call"); }

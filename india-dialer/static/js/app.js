@@ -17,6 +17,7 @@ import { wireFunnel, refreshStats } from "./funnel.js";
 import { wireFollowups, followKey } from "./follow.js";
 import { wireModals, helpModal, sessionModal, sessionEndCard, pauseReasons } from "./modals.js";
 import { wireSamples } from "./samples.js";
+import { wireEditor } from "./editor.js";
 
 let countdown = null;
 const settings = { openTel: store.get("in_open_tel", "1") === "1" };
@@ -179,7 +180,7 @@ function endCall() {
   if (!onCall()) return;
   S.endedAt = new Date();
   setState("wrap");
-  openWrap(S.connectedAt ? "How did it go?" : "No pickup?", S.connectedAt ? "" : "NO_ANSWER");
+  openWrap(S.connectedAt ? "How did it go?" : "No pickup?", S.connectedAt ? (S.call.suggest || "") : "NO_ANSWER");
 }
 
 function noAnswer() {
@@ -430,7 +431,7 @@ function wire() {
   });
   $("pause-menu").innerHTML = pauseReasons().map((r) => '<button role="menuitem" data-pause="' + esc(r) + '">' + esc(r) + "</button>").join("") +
     '<hr><button role="menuitem" data-end="1">End session</button>';
-  wireLead(); wireWrap(); wireSamples(); wireRails(); wireScript(); wireFunnel(); wireFollowups(); wireModals();
+  wireEditor(); wireLead(); wireWrap(); wireSamples(); wireRails(); wireScript(); wireFunnel(); wireFollowups(); wireModals();
 }
 
 Object.assign(actions, { endSession, startSession, resume, openLead });

@@ -201,3 +201,261 @@ targets:
     - {key: follow_through, label: Sample follow-through, num: samples_received, den: samples_asked,   target: 0.60}
     - {key: win_rate,      label: Win rate,              num: won,              den: samples_delivered, target: 0.25}
   positive_conversations_per_day: 10
+
+pause_reasons: [Break, Lunch, Research, Other]
+default_script_version: v1
+
+# ---------------------------------------------------------------- scripts --
+# The call tree (right column). Imperium shape: reception, permission, pull
+# pitch, qualify, ask, book, objections on `o`. Arrow keys walk a flow.
+#
+# Tokens: {dm_first} {dm_name} {company} {agent} {city} {whatsapp} {email}
+#         {demo_when} {website}
+#   {?dm_name}shown when known{/dm_name}   {!dm_name}shown when not{/dm_name}
+#   **bold** works. No em dashes.
+# step keys:
+#   say      English lines. The first is the main one, the rest follow on.
+#   say_hi   Hinglish lines, same order. The Hinglish toggle shows them.
+#   cue      stage direction, grey.   rules   reminders, grey list.
+#   chips    questions to pick from (qualify). `field` writes the answer.
+#   capture  input fields shown in the step: [whatsapp, demo_at, ...]
+#   branches [{label, to, outcome}]   `outcome` suggests the wrap-up pick.
+#   when / unless   show the step only when a token is set / empty.
+# Versions can `extends:` another and override single steps, for A/B tests:
+# sessions pick a version and the stats split by it.
+scripts:
+  tree:
+    v1:
+      order:
+        call: [reception_known, reception_unknown, permission, pitch, qualify, ask, book]
+        callback: [callback_open, pitch, qualify, ask, book]
+        follow_up: [follow_up_open, ask, book]
+      steps:
+        reception_known:
+          title: Reception
+          when: dm_name
+          say:
+            - "Hi, can I speak with {dm_first} please? It's Pawan."
+          say_hi:
+            - "Hi, {dm_first} ji se baat ho sakti hai? It's Pawan."
+            - "(If asked \"kis baare mein\") Drawing inspection ke baare mein, he'll know."
+          cue: "Short, warm, then quiet. If asked what it's about: \"About drawing inspection, he'll know.\""
+          rules:
+            - Never pitch the reception.
+            - "Not in? Ask for their direct mobile and a good time, then pick DM not in."
+        reception_unknown:
+          title: Reception
+          unless: dm_name
+          say:
+            - "Hi, I need to speak with whoever handles quality, the person who makes the inspection reports and ballooned drawings. Who would that be?"
+            - "What's their name? Can you connect me?"
+          say_hi:
+            - "Hi, mujhe quality dekhne wale se baat karni thi, jo inspection reports aur ballooned drawings banate hain. Woh kaun honge?"
+            - "Unka naam kya hai? Aap connect kar denge?"
+          cue: "Type the name into Decision maker in the wrap-up. If they're not in: \"Could I have their direct mobile? I'll call at a better time.\""
+          capture: [dm_name, dm_mobile]
+        callback_open:
+          title: Callback
+          say:
+            - "Hi {dm_first}, Pawan here. You'd asked me to call back around now, is this still a good time?"
+          say_hi:
+            - "Hi {dm_first} ji, Pawan bol raha hoon. Aapne is time call karne ko kaha tha, abhi baat ho sakti hai?"
+          cue: "If it's still bad: book a new time (Callback) and keep it short."
+        follow_up_open:
+          title: Sample follow-up
+          say:
+            - "Hi {dm_first}, Pawan from PXL Kraft. Just checking on the 5 drawings, did you get a chance to send them?"
+            - "Once they're in, you get them back ballooned the same day, and you check the accuracy yourself."
+          say_hi:
+            - "Hi {dm_first} ji, PXL Kraft se Pawan. Woh 5 drawings ke baare mein, bhej paye aap?"
+            - "Aate hi same day ballooned wapas bhej denge, accuracy aap khud check kar lena."
+          cue: "Delivered already? Ask how the accuracy looked, then move the card on the Samples rail."
+        permission:
+          title: Permission
+          say:
+            - "Hi {dm_first}, Pawan here. I'll be honest, this is a sales call. Give me 30 seconds and then you decide, fair?"
+          say_hi:
+            - "Hi {dm_first} ji, Pawan here. Seedha bolta hoon, yeh sales call hai. Bas 30 seconds dijiye, phir aap decide kariye, theek hai?"
+          cue: "Wait for the yes. A laugh counts."
+        pitch:
+          title: Pull pitch
+          say:
+            - "We've built the fastest AI ballooning tool out there. You upload a drawing and every characteristic is numbered in seconds, ready for your FAI or inspection report. Teams doing this by hand usually spend 20 to 40 minutes a drawing. I'm guessing at {company} that's all under control?"
+          say_hi:
+            - "Humne sabse fast AI ballooning tool banaya hai. Drawing upload karo, har characteristic seconds mein number ho jaata hai, FAI ya inspection report ke liye ready. Haath se karne wali teams ko ek drawing pe 20 se 40 minute lagte hain. {company} mein toh sab control mein hoga?"
+          cue: "Then stop talking. Let them correct you."
+          branches:
+            - {label: "\"All under control\"", to: qualify}
+            - {label: "They lean in: go to the ask", to: ask}
+        qualify:
+          title: Qualify
+          say:
+            - "Fair enough. Quick one so I don't waste your time..."
+          say_hi:
+            - "Theek hai. Ek quick sawaal, taaki aapka time waste na ho..."
+          cue: "Use 2 or 3. Tap a question once you've asked it."
+          chips:
+            - {q: "Roughly how many drawings do you balloon in a month?", q_hi: "Mahine mein roughly kitni drawings balloon karte ho?", field: actual_drawings_month}
+            - {q: "Who does it today, and in what software?", q_hi: "Abhi kaun karta hai, aur kis software mein?", field: software_used}
+            - {q: "How long does one drawing take?", q_hi: "Ek drawing mein kitna time lagta hai?", field: pain}
+            - {q: "Customer formats, your own or theirs?", q_hi: "Format customer ka hota hai ya aapka apna?"}
+          rules:
+            - "Low volume? Open Objections, Low volume, and ask for a referral."
+        ask:
+          title: Ask
+          say:
+            - "Easiest way to judge it: send me 5 of your drawings on WhatsApp, we'll send them back ballooned, and you check the accuracy yourself. Free. Which number should I send the details to?"
+          say_hi:
+            - "Judge karne ka sabse easy tarika: 5 drawings WhatsApp pe bhejiye, hum ballooned wapas bhejenge, aur accuracy aap khud check kariye. Free hai. Details kis number pe bhejun?"
+          cue: "Type the WhatsApp number. Rather see it live? Go to Book."
+          capture: [whatsapp, email]
+          branches:
+            - {label: "Gave a WhatsApp or email", outcome: SAMPLE_REQ}
+            - {label: "Rather see it live", to: book}
+        book:
+          title: Book a demo
+          say:
+            - "Let's do 15 minutes on a screen share. What works, {demo_when}?"
+            - "Done. I'll send a WhatsApp to confirm, is this the right number?"
+          say_hi:
+            - "15 minute ka screen share kar lete hain. {demo_when} chalega?"
+            - "Done. Confirm karne ke liye WhatsApp bhejta hoon, yahi number sahi hai?"
+          cue: "Pick the time here; it carries into the wrap-up. Then press b or 2, Demo booked."
+          capture: [demo_at, whatsapp]
+          branches:
+            - {label: "Booked", outcome: DEMO_BOOKED}
+
+  # Objections panel (o). Anchor, pattern disrupt, question. `tag` links a
+  # card to the wrap-up chip, so "Heard it" ticks the chip. `referral: true`
+  # shows the Add a referral button.
+  objection_rule: "Ignore the first knee-jerk objection. Handle two. On the third, get their WhatsApp and end politely."
+  objections:
+    - key: price_ask
+      title: What's the price?
+      tag: PRICE_ASK
+      anchor: "20,000 drawings for 1 lakh, so about 5 rupees a drawing."
+      disrupt: "But check the 5 free ones first."
+      question: "How many a month are you doing?"
+    - key: confidential
+      title: Our drawings are confidential
+      tag: CONFIDENTIAL_DRAWINGS
+      anchor: "Fair."
+      disrupt: "Send 5 old or already-released ones, or mask the title block."
+      question: "Would that work?"
+    - key: have_software
+      title: We already have software
+      tag: ALREADY_HAVE_SOFTWARE
+      anchor: "Which one?"
+      disrupt: "Most tools still leave some of it to do by hand."
+      question: "What does it still make you do by hand?"
+    - key: manual_fine
+      title: We do it manually, it's fine
+      tag: DO_IT_MANUALLY_FINE
+      anchor: "Totally, most do."
+      disrupt: "It works, it just eats time."
+      question: "How many hours a week goes into it?"
+    - key: send_whatsapp
+      title: Send details on WhatsApp
+      tag: SEND_DETAILS_WHATSAPP
+      anchor: "Sending now."
+      disrupt: "So it's useful and not just a brochure..."
+      question: "What kind of parts are the drawings for?"
+    - key: low_volume
+      title: We don't do many
+      tag: LOW_VOLUME
+      referral: true
+      anchor: "Got it."
+      disrupt: "Then it may not be worth it for you, and that's fine."
+      question: "Who do you know that does a lot of these, a customer or a lab you use?"
+    - key: not_interested
+      title: Not interested
+      tag: NOT_INTERESTED
+      anchor: "Of course, you don't know what it is yet."
+      disrupt: "That's why the trial is free and on your own drawings."
+      question: "Who builds the inspection reports at {company} today?"
+    - key: busy
+      title: Busy right now
+      tag: BUSY
+      anchor: "I know, and I'll be quick."
+      disrupt: "Or I call back when it suits you."
+      question: "Later today or tomorrow morning?"
+    - key: too_expensive
+      title: Too expensive
+      tag: TOO_EXPENSIVE
+      anchor: "Compared to what?"
+      disrupt: "If one drawing takes 30 minutes by hand, 5 rupees is less than a minute of that time."
+      question: "What does an hour of your inspector's time cost?"
+    - key: send_email
+      title: Send an email
+      tag: SEND_EMAIL
+      anchor: "Happy to."
+      disrupt: "So it's not one more email you skip..."
+      question: "Should I put the free 5-drawing trial in it, and who else should see it?"
+    - key: boss
+      title: I need to ask my boss
+      tag: NEED_BOSS_APPROVAL
+      anchor: "Makes sense."
+      disrupt: "The trial costs nothing, so you have something to show him."
+      question: "What would he want to see in the result?"
+
+  # Follow-ups. WhatsApp opens wa.me with the text filled in; email opens a
+  # mailto: with subject = their first name. Pawan presses send himself.
+  templates:
+    sample_request:
+      label: Sample request
+      whatsapp: |-
+        Hi {dm_first}, Pawan from PXL Kraft, thanks for the time today.
+
+        For the free trial, please send 5 of your drawings here, PDF or DWG. Any part types you balloon regularly. Old or already-released drawings are fine, or mask the title block.
+
+        We send them back ballooned, and you check the accuracy yourself.
+      subject: "{dm_first}"
+      email: |-
+        Hi {dm_first},
+
+        Thanks for the time on the phone today.
+
+        For the free trial, reply with 5 of your drawings, PDF or DWG. Pick part types you balloon regularly. Old or already-released drawings are fine, or mask the title block.
+
+        We send them back ballooned, and you check the accuracy yourself.
+
+        Pawan
+        PXL Kraft, {website}
+    after_call_intro:
+      label: After the call
+      whatsapp: |-
+        Hi {dm_first}, Pawan from PXL Kraft. Good speaking today. We do AI ballooning for FAI and inspection reports: upload a drawing and every characteristic is numbered in seconds.
+
+        {website}
+      subject: "{dm_first}"
+      email: |-
+        Hi {dm_first},
+
+        Good speaking today. We do AI ballooning for FAI and inspection reports: upload a drawing and every characteristic is numbered in seconds.
+
+        If you want to try it, send 5 drawings and we'll balloon them free.
+
+        Pawan
+        PXL Kraft, {website}
+    sample_delivered:
+      label: Sample delivered
+      whatsapp: |-
+        Hi {dm_first}, your 5 drawings are ballooned and sent back.
+
+        How did the accuracy look?
+      subject: "{dm_first}"
+      email: |-
+        Hi {dm_first},
+
+        Your 5 drawings are ballooned and attached.
+
+        How did the accuracy look?
+
+        Pawan
+        PXL Kraft, {website}
+
+# Follow-ups rail: when a nudge is due.
+followups:
+  sample_not_received_hours: 24
+  delivered_no_feedback_hours: 48
+  interested_no_step_days: 3

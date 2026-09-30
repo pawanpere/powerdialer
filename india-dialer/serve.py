@@ -93,6 +93,147 @@ def apply_script_edits(cfg):
     return edits
 
 
+STEP_TEXT = ("title", "cue")
+STEP_LISTS = ("say", "say_hi", "rules")
+CLAIMS = (("engineer", "an engineer checking drawings"), ("encrypt", "encryption"), ("nda", "an NDA"),
+          ("iso ", "ISO certification"), ("certified", "a certification"), ("secure", "security"),
+          ("guarantee", "a guarantee"))
+
+
+def text_problems(texts):
+    """(error, warnings). Dashes are refused; claims the offer cannot back
+    are flagged so they get a second look."""
+    joined = " ".join(t for t in texts if t)
+    if "\u2014" in joined or "\u2013" in joined:
+        return "No em or en dashes. Use a comma or a full stop.", []
+    low = " " + joined.lower() + " "
+    return None, [label for word, label in CLAIMS if word in low]
+
+
+def _read_edits():
+    try:
+        with open(scripts_path(), encoding="utf-8") as fh:
+            edits = json.load(fh)
+    except (OSError, ValueError):
+        edits = {}
+    for k in ("tree", "templates", "objections"):
+        edits.setdefault(k, {})
+    return edits
+
+
+def _write_edits(edits):
+    os.makedirs(os.path.dirname(scripts_path()), exist_ok=True)
+    tmp = scripts_path() + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(edits, fh, indent=2, ensure_ascii=False)
+    os.replace(tmp, scripts_path())
+
+
+def save_script_edit(data):
+    """One editor action. Returns (error, warnings)."""
+    op = data.get("op")
+    edits = _read_edits()
+    scripts = CFG.get("scripts") or {}
+    raw = CFG.get("_raw_scripts") or {}
+    warnings = []
+
+    if op == "step":
+        version, step_id = str(data.get("version") or ""), str(data.get("id") or "")
+        if step_id not in ((scripts.get("tree") or {}).get(version) or {}).get("steps", {}):
+            return "That step does not exist.", []
+        incoming, fields = data.get("fields") or {}, {}
+        for key in STEP_TEXT:
+            if key in incoming:
+                fields[key] = str(incoming[key] or "").strip()[:600]
+        for key in STEP_LISTS:
+            if key in incoming:
+                fields[key] = [str(x).strip()[:1500] for x in (incoming[key] or []) if str(x).strip()][:12]
+        if "chips" in incoming:
+            old = {c.get("q"): c for c in scripts["tree"][version]["steps"][step_id].get("chips") or []}
+            fields["chips"] = [dict({k: v for k, v in (old.get(c.get("q")) or {}).items() if k == "field"},
+                                    q=str(c.get("q") or "").strip()[:300], q_hi=str(c.get("q_hi") or "").strip()[:300])
+                               for c in incoming["chips"] or [] if str(c.get("q") or "").strip()][:12]
+        if "say" in fields and not fields["say"]:
+            return "A step needs at least one line to say.", []
+        texts = [v for v in fields.values() if isinstance(v, str)] + \
+            [x for k in STEP_LISTS for x in fields.get(k, [])] + [c[k] for c in fields.get("chips", []) for k in ("q", "q_hi")]
+        error, warnings = text_problems(texts)
+        if error:
+            return error, []
+        node = edits["tree"].setdefault(version, {})
+        node[step_id] = dict(node.get(step_id) or {}, **fields)
+
+    elif op == "reset_step":
+        (edits["tree"].get(str(data.get("version") or "")) or {}).pop(str(data.get("id") or ""), None)
+
+    elif op == "template":
+        kind = str(data.get("kind") or "")
+        if kind not in (raw.get("templates") or {}):
+            return "That template does not exist.", []
+        fields = {k: str(data.get(k) or "").strip()[:4000] for k in ("whatsapp", "subject", "email")}
+        if not all(fields.values()):
+            return "A template needs the WhatsApp text, a subject and the email body.", []
+        error, warnings = text_problems(list(fields.values()))
+        if error:
+            return error, []
+        edits["templates"][kind] = fields
+
+    elif op == "reset_template":
+        edits["templates"].pop(str(data.get("kind") or ""), None)
+
+    elif op == "objection":
+        key = re.sub(r"[^a-z0-9_]", "", str(data.get("key") or "").lower())[:40]
+        title = str(data.get("title") or "").strip()[:80]
+        if not key:
+            key = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")[:40]
+        if not key or not title:
+            return "An objection needs what they say, as its title.", []
+        fields = {k: str(data.get(k) or "").strip()[:600] for k in ("title", "anchor", "disrupt", "question")}
+        if not (fields["anchor"] or fields["question"]):
+            return "Write at least the anchor or the question.", []
+        error, warnings = text_problems(list(fields.values()))
+        if error:
+            return error, []
+        edits["objections"][key] = fields
+
+    elif op == "reset_objection":
+        edits["objections"].pop(str(data.get("key") or ""), None)
+
+    elif op == "rule":
+        text = str(data.get("text") or "").strip()[:600]
+        error, warnings = text_problems([text])
+        if error:
+            return error, []
+        if text:
+            edits["objection_rule"] = text
+        else:
+            edits.pop("objection_rule", None)
+
+    elif op == "version":
+        name = re.sub(r"[^a-z0-9_-]", "", str(data.get("name") or "").lower())[:12]
+        base = str(data.get("extends") or "")
+        if not name:
+            return "Name the version, like v2.", []
+        if name in (scripts.get("tree") or {}):
+            return f"{name} already exists.", []
+        if base not in (scripts.get("tree") or {}):
+            return "Pick a version to start from.", []
+        edits["tree"][name] = {"_extends": base}
+
+    elif op == "delete_version":
+        name = str(data.get("name") or "")
+        if name in (raw.get("tree") or {}):
+            return "Versions from config.yaml can't be deleted here. Edit the file instead.", []
+        edits["tree"].pop(name, None)
+
+    else:
+        return "Unknown editor action.", []
+
+    _write_edits(edits)
+    apply_script_edits(CFG)
+    return None, warnings
+
+
 def resolve_tree(tree):
     """Flatten `extends:` so the cockpit gets complete versions."""
     out = {}
@@ -335,6 +476,13 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/referral":
             new_id, error = db.add_referral(lead_id, data, CFG, agent)
             return self._err(error) if error else self._json({"ok": True, "id": new_id})
+        if route == "/api/scripts":
+            error, warnings = save_script_edit(data)
+            if error:
+                return self._err(error)
+            cfg = public_config()
+            return self._json({"ok": True, "warnings": warnings, "scripts": cfg["scripts"],
+                               "script_versions": cfg["script_versions"], "scripts_edited": cfg["scripts_edited"]})
         if route == "/api/lead/add":
             new_id, error = db.add_referral(None, data, CFG, agent)
             return self._err(error) if error else self._json({"ok": True, "id": new_id})
