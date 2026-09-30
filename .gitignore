@@ -20,3 +20,7 @@ __pycache__/
 # In-app script and objection edits (live next to the database)
 /scripts.json
 /objections.json
+
+# India dialer: the lead lists hold named people's mobiles; never commit them
+/Me
+india-dialer/data/

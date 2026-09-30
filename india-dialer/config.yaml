@@ -1,0 +1,105 @@
+# India ballooning dialer. Pawan dials on his own phone; this app runs the
+# queue, the script, the wrap-up, follow-ups and the numbers.
+#
+# Everything the cockpit shows or says lives in this file. No em dashes in
+# anything user-facing: tests/test_config.py fails the build if one appears.
+
+brand:
+  name: PXL Kraft
+  website: https://pxlkraft.com
+  caller: Pawan
+
+agent: {id: pawan, name: Pawan}
+
+# The offer, as the scripts and templates state it. Keep claims true: no
+# engineer review on this offer, and no security feature that is not live.
+offer:
+  bulk: "20,000 ballooned drawings for 1 lakh rupees, about 5 rupees a drawing"
+  trial: "5 of your own drawings, ballooned free, so you can check the accuracy yourself"
+
+# ---------------------------------------------------------------- import --
+import:
+  default_tier: B            # for lists without a tier column (IndiaMART, LinkedIn exports)
+  # Source column -> field. Header match is case- and punctuation-insensitive.
+  # Every column listed under `phone` is read, so a list with separate Phone
+  # and Mobile columns keeps both numbers.
+  aliases:
+    tier: [tier, priority, grade]
+    company: [company, company name, organization, organisation, account name, firm name, business name]
+    city: [city, town, location city]
+    state: [state, region, state/region, location state]
+    location: [location, geography, address]
+    type: [type, category, segment, business type, nature of business, industry]
+    phone: [phone, phone number, telephone, contact number, landline, mobile, mobile number, primary phone, alternate number, other phone]
+    phone_source: [phone_source, phone source, number source]
+    ask_for: [ask_for, ask for, contact person, contact, contact name, decision maker, person]
+    first_name: [first name, firstname]
+    last_name: [last name, lastname]
+    dm_title: [title, designation, job title, position]
+    why: [why, reason, notes, description, about]
+    est_drawings_month: [est_drawings_month, est drawings month, drawings per month, est volume, volume]
+    website: [website, url, web site, company website, domain]
+    flags: [flags, flag, warnings]
+    source: [source, lead source]
+    email: [email, email address, e-mail]
+    whatsapp: [whatsapp, whatsapp number]
+    language_pref: [language, language_pref, language pref]
+
+  # A lead whose flags contain any of these is HELD: imported, shown with a
+  # red banner, and not dialled until Pawan ticks "cleared" on it. Exact
+  # phrases only: "no ITAR/defence indication found" must not trigger a hold.
+  hold_if_flags_contain: ["DEFENSE/AERO CHECK"]
+
+  # The segment comes from `type` (first rule whose words appear wins), then
+  # the company name. Rows where `type` is really a state name or a stray
+  # letter and the name says nothing use `why`,
+  # in `why_priority` order: a tool room or a manufacturer that mentions its
+  # own CMM is not an inspection lab.
+  segments:
+    - {label: Marketplace, words: [marketplace, sourcing platform, manufacturing-as-a-service, manufacturing as a service, ems sourcing]}
+    - {label: Inspection lab, words: [metrology, cmm, calibration, nabl, 3d scanning, inspection outsourcing, inspection services, inspection service, testing lab, dimensional lab]}
+    - {label: PPAP consultancy, words: [consultancy, consultant, ppap documentation, quality documentation]}
+    - {label: Engineering services, words: [kpo, engineering services, engineering-services, cad drafting, cad services, drafting, gcc, global capability, delivery center, delivery centre, design center, design centre, technology center, technology centre, centre of excellence, coe]}
+    - {label: OEM supplier quality, words: [supplier quality]}
+    - {label: Tool room, words: [tool room, tool design, tooling institute, tooling]}
+    - {label: Exporter / manufacturer, words: [exporter, export, forging, forgings, casting, castings, foundry, machining, machined, tier-1, tier 1, auto, automotive, component, components, press, stamping, precision, manufacturer, manufacturing, fasteners, bearings, pistons, medical-device, medical device, rail, rolling-stock, rolling stock, metal-injection, mim, moulds, moulding, molding, parts, equipment]}
+  why_priority: [Marketplace, PPAP consultancy, Engineering services, OEM supplier quality, Exporter / manufacturer, Tool room, Inspection lab]
+  default_segment: Other
+
+states:
+  AP: Andhra Pradesh
+  CG: Chhattisgarh
+  DL: Delhi
+  GA: Goa
+  GJ: Gujarat
+  HR: Haryana
+  HP: Himachal Pradesh
+  JH: Jharkhand
+  KA: Karnataka
+  KL: Kerala
+  MH: Maharashtra
+  MP: Madhya Pradesh
+  OR: Odisha
+  OD: Odisha
+  PB: Punjab
+  RJ: Rajasthan
+  TN: Tamil Nadu
+  TS: Telangana
+  TG: Telangana
+  UK: Uttarakhand
+  UP: Uttar Pradesh
+  WB: West Bengal
+  NCR: Haryana
+
+# --------------------------------------------------------------- scoring --
+# Raw points -> percentile rank 0-99 across every dialable lead. Held leads
+# are scored but stay out of the queue until cleared.
+scoring:
+  tier: {A: 30, B: 15, C: 5}
+  volume:                    # est drawings a month; the low end of a range counts
+    - {min: 500, points: 25}
+    - {min: 200, points: 15}
+    - {min: 50, points: 8}
+  mobile: 5                  # the lead has at least one mobile number
+  named_dm: 10               # a person's name, not just a role, to ask for
+  interested_before: 40      # an earlier call ended interested, sample or demo
