@@ -832,6 +832,18 @@ def followups_due(cfg, now_utc=None):
     return out
 
 
+def whatsapp_linkedin_list(limit=100):
+    """Leads that used up their tries without reaching the DM: reach them in writing."""
+    with connect() as con:
+        rows = con.execute(
+            """SELECT l.id, l.company, l.city, l.dm_name, l.whatsapp, l.email, l.dm_mobile, l.website, l.attempts, l.last_called_at,
+                      (SELECT MAX(at) FROM followups f WHERE f.lead_id=l.id) last_nudge,
+                      (SELECT e164 FROM phones p WHERE p.lead_id=l.id AND p.kind='mobile' AND p.bad=0 ORDER BY position LIMIT 1) mobile
+               FROM leads l WHERE l.list_tag='whatsapp_linkedin' AND l.status='EXHAUSTED'
+               ORDER BY l.rank DESC LIMIT ?""", (limit,)).fetchall()
+    return [dict(r) for r in rows]
+
+
 # ------------------------------------------------------------------ lists --
 
 def callbacks_list():

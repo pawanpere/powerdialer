@@ -392,7 +392,7 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/samples":
             return self._json({"samples": db.samples_board()})
         if route == "/api/followups":
-            return self._json({"due": db.followups_due(CFG)})
+            return self._json({"due": db.followups_due(CFG), "written_only": db.whatsapp_linkedin_list()})
         if route == "/api/calls":
             start = policy.ist_day_start_utc(t) if self._q("range", "today") == "today" else None
             return self._json({"calls": db.calls_between(start, limit=300)})
@@ -490,7 +490,17 @@ class Handler(BaseHTTPRequestHandler):
             error = db.sample_stage(int(data.get("id") or 0), data.get("stage"), data)
             return self._err(error) if error else self._json({"ok": True, "samples": db.samples_board()})
         if route == "/api/followup":
-            db.log_followup(lead_id, data.get("channel"), data.get("template"), data.get("to"), agent, data.get("sample_id"))
+            if data.get("channel") not in ("whatsapp", "email"):
+                return self._err("Unknown channel.")
+            if data.get("template") not in ((CFG.get("scripts") or {}).get("templates") or {}):
+                return self._err("Unknown template.")
+            lead = db.lead_payload(lead_id, CFG)
+            if lead is None:
+                return self._err("That lead no longer exists.", 404)
+            if lead["is_dnc"]:
+                return self._err("On the do-not-call list: no messages either.", 409)
+            db.log_followup(lead_id, data["channel"], data["template"], str(data.get("to") or "")[:120], agent,
+                            data.get("sample_id"))
             return self._json({"ok": True})
         if route == "/api/session/start":
             versions = list(((CFG.get("scripts") or {}).get("tree") or {}).keys()) or ["v1"]

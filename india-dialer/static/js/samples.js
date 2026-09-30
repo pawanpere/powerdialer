@@ -42,7 +42,9 @@ function card(c) {
   const origin = parseUTC(c.origin_dialed_at);
   const acts = OPEN.indexOf(c.stage) >= 0
     ? '<span class="acts">' + nextSteps(c).map((s) => '<button class="btn sm" data-stage="' + s[1] + '" data-card="' + c.id + '">' + esc(s[0]) + "</button>").join("") +
-      '<button class="btn quiet sm" data-stage="lost" data-card="' + c.id + '">Lost</button></span>'
+      '<button class="btn quiet sm" data-stage="lost" data-card="' + c.id + '">Lost</button>' +
+      (c.stage === "asked" || c.stage === "delivered" ? '<button class="btn quiet sm" data-fu-card="' + c.id + '" data-lead-id="' + c.lead_id + '" data-t="' +
+        (c.stage === "asked" ? "sample_request" : "sample_delivered") + '">WhatsApp</button>' : "") + "</span>"
     : "";
   return '<div class="row" data-lead="' + c.lead_id + '"><span class="t1">' + esc(c.company) + '</span><span class="r">' + esc(since(c)) + "</span>" +
     '<span class="t2 full">' + (c.kind === "demo" ? "Demo · " : "") + bits.join(" · ") + (origin ? (bits.length ? " · " : "") + esc(fromCall(origin)) : "") + "</span>" + acts + "</div>";

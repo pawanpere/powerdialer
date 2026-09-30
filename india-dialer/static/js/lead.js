@@ -67,7 +67,8 @@ export function renderLead() {
   links.push(["Google: quality head", "https://www.google.com/search?q=" + q('"' + l.company + '" quality head')]);
   links.push(["LinkedIn", "https://www.linkedin.com/search/results/people/?keywords=" + q(l.company + " quality")]);
   links.push(["IndiaMART", "https://dir.indiamart.com/search.mp?ss=" + q(l.company)]);
-  $("c-links").innerHTML = links.map((x) => '<a href="' + esc(x[1]) + '" target="_blank" rel="noopener noreferrer">' + esc(x[0]) + "</a>").join("");
+  $("c-links").innerHTML = links.map((x) => '<a href="' + esc(x[1]) + '" target="_blank" rel="noopener noreferrer">' + esc(x[0]) + "</a>").join("") +
+    (l.is_dnc ? "" : '<span class="links-fu"><button class="btn quiet sm" data-fu-here="whatsapp">WhatsApp <kbd>w</kbd></button><button class="btn quiet sm" data-fu-here="email">Email <kbd>e</kbd></button></span>');
 
   const last = (l.history || []).find((h) => h.notes || h.pain);
   $("c-last").hidden = !last && !l.pain && !l.notes;

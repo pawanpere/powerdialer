@@ -212,7 +212,7 @@ body[data-state="connected"] .timer { color: var(--mint); }
 .numbers .num-row.blocked .v { color: var(--ink-3); text-decoration: line-through; }
 .numbers .add { display: flex; gap: 6px; padding-top: 8px; }
 .numbers .add .field { max-width: 240px; }
-.links { font-size: 13.5px; color: var(--ink-3); }
+.links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; font-size: 13.5px; color: var(--ink-3); }
 .links a { margin-right: 14px; color: var(--ink-2); }
 .last { font-size: 14px; color: var(--ink-2); padding: 0 0 0 16px; text-indent: -8px; }
 .last .by { display: block; font-size: 12.5px; color: var(--ink-3); text-indent: 0; }
@@ -385,3 +385,7 @@ table.stat .good { color: var(--mint); } table.stat .warn { color: var(--marigol
 .ed-preview { border: 1px solid var(--line); background: var(--surface); padding: 12px 14px; border-radius: var(--r); font-size: 14px; line-height: 1.55; }
 .ed-preview .say { font-size: 15.5px; }
 @media (max-width: 760px) { .ed-body { grid-template-columns: 1fr; } .ed-nav { border-right: 0; max-height: 30vh; } }
+
+.links-fu { margin-left: auto; display: inline-flex; gap: 2px; }
+.fu-tabs { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin: 6px 0 10px; }
+.fu-go { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
