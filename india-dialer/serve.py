@@ -123,6 +123,7 @@ def public_config():
     out["scripts_edited"] = CFG.get("_edited") or {}
     out["lan"] = {"on": LAN["on"], "url": lan_url() if LAN["on"] else ""}
     out["phone_type_source"] = "phonenumbers" if phones.PRECISE else "heuristic"
+    out["clock_shift_min"] = db.CLOCK_SHIFT.total_seconds() / 60
     return out
 
 

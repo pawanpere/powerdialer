@@ -160,3 +160,30 @@ outcomes:
   - {key: NO_ANSWER,     label: No answer / busy / switched off,        kind: retry,    connect: false}
   - {key: BAD_NUMBER,    label: Wrong number / not in service,          kind: final,    connect: false}
   - {key: DNC,           label: Asked not to call,                      kind: dnc,      connect: true, tone: danger}
+
+# Level 2 objection chips, in the order they show.
+objection_tags:
+  - {key: NOT_INTERESTED,          label: Not interested}
+  - {key: BUSY,                    label: Busy right now}
+  - {key: SEND_DETAILS_WHATSAPP,   label: Send details on WhatsApp}
+  - {key: SEND_EMAIL,              label: Send an email}
+  - {key: PRICE_ASK,               label: Asked the price}
+  - {key: TOO_EXPENSIVE,           label: Too expensive}
+  - {key: ALREADY_HAVE_SOFTWARE,   label: Already have software}
+  - {key: DO_IT_MANUALLY_FINE,     label: Manual is fine}
+  - {key: CONFIDENTIAL_DRAWINGS,   label: Drawings are confidential}
+  - {key: LOW_VOLUME,              label: Low volume}
+  - {key: NEED_BOSS_APPROVAL,      label: Needs the boss}
+  - {key: OTHER,                   label: Other}
+
+# Sample and demo pipeline, left to right on the Samples rail.
+pipeline:
+  stages:
+    - {key: demo,      label: Demo booked}
+    - {key: asked,     label: Asked}
+    - {key: received,  label: Drawings in}
+    - {key: delivered, label: Delivered}
+    - {key: feedback,  label: Feedback}
+    - {key: quote,     label: Quote sent}
+    - {key: won,       label: Won}
+    - {key: lost,      label: Lost}

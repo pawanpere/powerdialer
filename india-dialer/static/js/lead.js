@@ -9,6 +9,8 @@ import { qrSvg } from "./qr.js";
 const KIND = { mobile: "mobile", landline: "landline, usually reception", tollfree: "toll-free, a call centre" };
 const ORIGIN = { dm: "the DM's own number", added: "added by you", referral: "from a referral", list: "" };
 
+const stageName = (k) => (((S.cfg.pipeline || {}).stages || []).find((s) => s.key === k) || { label: k }).label.toLowerCase();
+
 export function activePhone() {
   const p = S.cur && S.cur.phones;
   return p && p.length ? p[Math.min(S.phoneIdx, p.length - 1)] : null;
@@ -41,6 +43,8 @@ export function renderLead() {
   meta.push(l.attempts ? "try " + l.attempt_no + " of " + l.max_attempts : "first call");
   if (l.last_outcome) meta.push("last: " + esc(outcome(l.last_outcome).label.toLowerCase()));
   if (l.group) meta.push('<span class="flag">' + esc(l.group) + "</span>");
+  const card = (l.samples || []).find((c) => ["won", "lost"].indexOf(c.stage) < 0);
+  if (card) meta.push('<span class="flag">' + (card.kind === "demo" ? "Demo" : "Sample") + ": " + esc(stageName(card.stage)) + "</span>");
   if (l.referred_by_company) meta.push("referred by " + esc(l.referred_by_company));
   if (l.flags && !l.held) meta.push('<span class="flag">Check: ' + esc(l.flags) + "</span>");
   $("c-meta").innerHTML = meta.join(" · ");

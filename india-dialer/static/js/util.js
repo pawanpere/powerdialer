@@ -37,6 +37,12 @@ export function istDay(d) {
   if (diff === -1) return "Yesterday";
   return DOW[x.getUTCDay()] + " " + x.getUTCDate() + " " + MON[x.getUTCMonth()];
 }
+/* "from today's call", "from the call on Mon 28 Sep" */
+export function fromCall(d) {
+  if (!d) return "";
+  const day = istDay(d);
+  return day === "Today" ? "from today's call" : day === "Yesterday" ? "from yesterday's call" : "from the call on " + day;
+}
 export const istWhen = (d) => (d ? istDay(d) + " " + istClock(d) : "");
 /* 'YYYY-MM-DDTHH:MM' for a datetime-local input, on the IST clock. */
 export function istInput(d) {

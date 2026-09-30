@@ -158,10 +158,12 @@ body[data-state="wrap"] .lamp i { background: var(--coral-fill); }
 .note b { display: block; color: var(--ink-2); }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; width: 100%; padding: 8px 8px; border: 0;
        border-bottom: 1px solid var(--line); background: none; text-align: left; }
-button.row:hover { background: var(--sunken); }
+button.row:hover, div.row[data-lead]:hover { background: var(--sunken); }
+div.row[data-lead] { cursor: pointer; }
 .row.on { background: var(--sunken); }
 .row .t1 { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .t2 { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .t2.full { white-space: normal; }
 .row .r { text-align: right; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
 .row .r b { display: block; font-family: var(--mono); font-weight: 400; color: var(--ink-2); }
 .row .late { color: var(--coral); }

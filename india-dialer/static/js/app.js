@@ -16,6 +16,7 @@ import { wireScript, scriptKey, jumpTo, objectionsOpen, closeObjections } from "
 import { wireFunnel, refreshStats } from "./funnel.js";
 import { wireFollowups, followKey } from "./follow.js";
 import { wireModals, helpModal, sessionModal, sessionEndCard, pauseReasons } from "./modals.js";
+import { wireSamples } from "./samples.js";
 
 let countdown = null;
 const settings = { openTel: store.get("in_open_tel", "1") === "1" };
@@ -379,6 +380,10 @@ document.addEventListener("keydown", (e) => {
     if (/^[0-9]$/.test(k)) { const o = (S.cfg.outcomes || [])[k === "0" ? 9 : +k - 1]; if (o) { e.preventDefault(); pick(o.key); } return; }
     if (k === "Enter") { const s = document.querySelector(".outcome.suggested"); if (s) { e.preventDefault(); pick(s.getAttribute("data-k")); } return; }
   }
+  if (k === "b" && (onCall() || S.state === "wrap")) {
+    if (onCall()) { if (S.state === "ringing") connected(); endCall(); }
+    return pick("DEMO_BOOKED");
+  }
   if (k === "c" && S.state === "ringing") return connected();
   if (k === "n" && S.state === "ringing") return noAnswer();
   if (k === "t") return tryNext();
@@ -425,13 +430,26 @@ function wire() {
   });
   $("pause-menu").innerHTML = pauseReasons().map((r) => '<button role="menuitem" data-pause="' + esc(r) + '">' + esc(r) + "</button>").join("") +
     '<hr><button role="menuitem" data-end="1">End session</button>';
-  wireLead(); wireWrap(); wireRails(); wireScript(); wireFunnel(); wireFollowups(); wireModals();
+  wireLead(); wireWrap(); wireSamples(); wireRails(); wireScript(); wireFunnel(); wireFollowups(); wireModals();
 }
 
 Object.assign(actions, { endSession, startSession, resume, openLead });
 
+/* Rehearsal (INDIA_CLOCK_SHIFT_MIN on the server): move this page's clock by
+   the same amount so timers, "in 2 h" and the server agree. */
+function rehearsalClock(min) {
+  const off = min * 60000, Real = Date;
+  class Shifted extends Real {
+    constructor(...a) { if (a.length) super(...a); else super(Real.now() + off); }
+    static now() { return Real.now() + off; }
+  }
+  window.Date = Shifted;
+  banner("", "<b>Rehearsal clock.</b> The time is moved " + Math.round(min) + " minutes so the calling windows can be tried. Restart the server without INDIA_CLOCK_SHIFT_MIN for real calls.");
+}
+
 fetch("/api/config").then((r) => r.json()).then((cfg) => {
   S.cfg = cfg;
+  if (cfg.clock_shift_min) rehearsalClock(cfg.clock_shift_min);
   S.session.script = cfg.default_script_version || (cfg.script_versions || ["v1"])[0];
   wire();
   emit("cfg", cfg);
