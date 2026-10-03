@@ -26,7 +26,7 @@ CASES = [
     ("tel:+919876543210", "M", 2),
     ("tel:+918041161000", "L", 1),
     ("tel:18004255758", "H", 3),
-    ("http://192.168.1.23:8766/m?k=3f9c2a71b6d04e58", "M", 4),
+    ("http://192.168.1.23:8780/m?k=3f9c2a71b6d04e58", "M", 4),
     ("https://wa.me/919820204373?text=Hi%20Dale%2C%20it%27s%20Pawan", "Q", 6),
     ("https://pxlkraft.com/india?utm_source=call&utm_medium=whatsapp&utm_campaign=ballooning-trial", "M", 7),
     ("Drawing ballooning trial: 5 drawings, PDF or DWG. " * 3, "L", 8),

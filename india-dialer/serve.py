@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """India dialer: the laptop cockpit for calls placed on Pawan's own phone.
 
-    python3 india-dialer/serve.py              # http://localhost:8766, this machine only
+    python3 india-dialer/serve.py              # http://localhost:8780, this machine only
     python3 india-dialer/serve.py --lan        # also serve the phone page /m on the local network
     python3 india-dialer/serve.py --demo       # empty database: load a few sample companies
 
@@ -281,7 +281,7 @@ def lan_ip():
 
 
 def lan_url():
-    return f"http://{lan_ip()}:{LAN.get('port', 8766)}/m?k={LAN['token']}"
+    return f"http://{lan_ip()}:{LAN.get('port', 8780)}/m?k={LAN['token']}"
 
 
 # -------------------------------------------------------------------- http --
@@ -532,7 +532,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     global CFG
     parser = argparse.ArgumentParser(description="Run the India dialer cockpit.")
-    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8766)))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8780)))
     parser.add_argument("--lan", action="store_true", help="also listen on the local network for the phone page /m")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser")
     parser.add_argument("--demo", action="store_true", help="load sample companies into an empty database")

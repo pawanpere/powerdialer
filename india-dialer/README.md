@@ -36,11 +36,11 @@ and the leads with no number. Re-importing is safe: new companies are
 added, untouched ones pick up new fields, and anything already dialled
 keeps its history. `--dry-run` parses and reports without writing.
 
-`serve.py` opens the cockpit at http://localhost:8766.
+`serve.py` opens the cockpit at http://localhost:8780.
 
 | Flag | What it does |
 |---|---|
-| `--port 8766` | Pick the port. |
+| `--port 8780` | Pick the port. |
 | `--no-open` | Don't open a browser. |
 | `--demo` | Load 9 sample companies into an empty database, to try it out. |
 | `--lan` | Also serve the phone page `/m` on your Wi-Fi (see below). |
