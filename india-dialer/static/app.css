@@ -393,3 +393,11 @@ table.stat .good { color: var(--mint); } table.stat .warn { color: var(--marigol
 .links-fu { margin-left: auto; display: inline-flex; gap: 2px; }
 .fu-tabs { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin: 6px 0 10px; }
 .fu-go { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+
+/* Import */
+.imp-drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 14px; padding: 28px 16px; border: 1px dashed var(--line-2);
+            border-radius: var(--r); background: var(--surface); cursor: pointer; text-align: center; }
+.imp-drop:hover, .imp-drop.over { border-color: var(--ink); }
+.imp-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.imp-lists { margin-top: 12px; }
+.imp-list { margin: 0; padding: 0 0 10px 18px; font-size: 13px; line-height: 1.6; max-height: 220px; overflow-y: auto; }

@@ -30,7 +30,9 @@ python3 india-dialer/import.py Me/India-Ballooning-Call-List_100_2026-09-28.csv
 python3 india-dialer/serve.py
 ```
 
-The import prints counts by tier and by phone type, and lists the leads
+Or, in the cockpit: Menu, **Import a list** (also on the empty queue). Pick or drop a CSV or Excel file, check the preview (new versus already on the list, tiers, mobile or landline, held, more than one number, no number, which columns were used and which were ignored), then import. Columns are matched by name through `import.aliases` in `config.yaml`, so IndiaMART and LinkedIn exports work; add a header there if one is missed.
+
+The command-line import prints counts by tier and by phone type, and lists the leads
 with more than one number, the held leads, the international-only leads
 and the leads with no number. Re-importing is safe: new companies are
 added, untouched ones pick up new fields, and anything already dialled

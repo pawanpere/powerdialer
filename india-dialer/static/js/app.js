@@ -91,7 +91,7 @@ function showEmpty(reason) {
   $("e-title").textContent = S.session.paused ? "Paused: " + S.session.paused.toLowerCase() : "Nothing to call right now";
   $("e-text").textContent = S.session.paused ? "Your lead went back to the queue. Callbacks and follow-ups are on the left." : reason || "";
   $("e-acts").innerHTML = S.session.paused ? '<button class="btn primary" data-act="resume">Resume <kbd>p</kbd></button>'
-    : '<button class="btn" data-act="refresh">Check again</button><button class="btn quiet" data-act="lead">Add a lead</button>';
+    : '<button class="btn" data-act="refresh">Check again</button><button class="btn quiet" data-act="import">Import a list</button><button class="btn quiet" data-act="lead">Add a lead</button>';
   setState("idle");
   emit("lead", null);
 }
@@ -421,6 +421,7 @@ function wire() {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const act = b.getAttribute("data-act");
     if (act === "resume") resume(); else if (act === "refresh") nextLead(); else if (act === "lead") actions.addLead();
+    else if (act === "import") actions.importList();
   });
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".menu-wrap")) closeMenus();

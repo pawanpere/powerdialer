@@ -234,6 +234,95 @@ def save_script_edit(data):
     return None, warnings
 
 
+# ------------------------------------------------------------------ import --
+
+UPLOAD_LIMIT = 8 * 1024 * 1024
+
+
+def upload_to_csv(data):
+    """The cockpit's file upload (base64) -> a temp CSV path. (path, error)."""
+    import base64
+    import tempfile
+    name = os.path.basename(str(data.get("filename") or "list.csv"))
+    try:
+        raw = base64.b64decode(str(data.get("content") or ""), validate=False)
+    except ValueError:
+        return None, "That file could not be read."
+    if not raw:
+        return None, "The file is empty."
+    if len(raw) > UPLOAD_LIMIT:
+        return None, "That file is over 8 MB. Split it, or import it with import.py."
+    low = name.lower()
+    fd, path = tempfile.mkstemp(suffix=".csv", prefix="india-import-")
+    with os.fdopen(fd, "w", newline="", encoding="utf-8") as out:
+        if low.endswith((".xlsx", ".xlsm")):
+            try:
+                import openpyxl
+            except ImportError:
+                return None, "Excel files need openpyxl. Save the sheet as CSV, or run pip install openpyxl."
+            try:
+                book = openpyxl.load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+            except Exception:                                    # noqa: BLE001  (any unreadable workbook)
+                return None, "That Excel file could not be opened. Save it as CSV and try again."
+            rows = [["" if v is None else str(v).strip() for v in r] for r in book.worksheets[0].iter_rows(values_only=True)]
+            start = next((i for i, r in enumerate(rows) if sum(1 for v in r if v) >= 2), 0)   # skip title rows
+            csv.writer(out).writerows(r for r in rows[start:] if any(r))
+        elif low.endswith(".xls"):
+            return None, "Old .xls files can't be read. Save it as .xlsx or CSV."
+        else:
+            try:
+                text = raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                text = raw.decode("cp1252", errors="replace")
+            out.write(text)
+    return path, None
+
+
+def import_list(path, filename, commit=False):
+    """Preview (commit=False) or import a CSV. Returns a dict for the cockpit."""
+    aliases = (CFG.get("import") or {}).get("aliases") or {}
+    with open(path, newline="", encoding="utf-8-sig", errors="replace") as fh:
+        headers = next(csv.reader(fh), []) or []
+    mapping = intake.map_headers(headers, aliases)
+    fields = set(mapping.values())
+    if "company" not in fields:
+        return {"error": "Couldn't find a company column. Columns in the file: " + ", ".join(h for h in headers if h)[:400] +
+                         ". Name one of them company, or add its name to import.aliases.company in config.yaml."}
+    rows = list(intake.read_rows(path, aliases))
+    leads, merges, notes = intake.collect(rows, CFG)
+    pretty = lambda n: phones.pretty(n["e164"], n["kind"])                    # noqa: E731
+    with db.connect() as con:
+        known = {r[0]: r[1] for r in con.execute("SELECT company_key, attempts FROM leads")}
+        blocked = db.dnc_keys(con)
+    kinds = {}
+    for lead in leads:
+        for n in lead["numbers"]:
+            kinds[n["kind"]] = kinds.get(n["kind"], 0) + 1
+    tiers = {t: sum(1 for l in leads if l["tier"] == t) for t in ("A", "B", "C")}
+    out = {
+        "filename": filename, "rows": len(rows), "leads": len(leads), "merged": merges, "tiers": tiers, "kinds": kinds,
+        "columns": [{"header": h, "field": mapping.get(h, "")} for h in headers if h],
+        "no_phone_column": "phone" not in fields,
+        "new": sum(1 for l in leads if l["company_key"] not in known),
+        "already": sum(1 for l in leads if l["company_key"] in known),
+        "dnc": [l["company"] for l in leads if ("company:" + l["company_key"]) in blocked
+                or any(n["e164"] in blocked for n in l["numbers"])],
+        "multi": [{"company": l["company"], "numbers": [pretty(n) + " " + n["kind"] for n in l["numbers"]]}
+                  for l in leads if len(l["numbers"]) > 1],
+        "held": [{"company": l["company"], "reason": l["hold_reason"]} for l in leads if l["hold_reason"]],
+        "intl": [{"company": l["company"], "numbers": l["international"]} for l in leads if l["international"]],
+        "no_number": [l["company"] for l in leads if not l["numbers"] and not l["international"]],
+        "notes": [k.replace("_", " ") + ": " + str(d) for k, d in notes],
+    }
+    if commit:
+        report = db.import_leads(leads, filename, CFG)
+        counts = db.summary_counts()
+        out["result"] = {"added": len(report["added"]), "refreshed": len(report["refreshed"]),
+                         "kept_worked": len(report["kept_worked"]), "numbers_added": report["numbers_added"],
+                         "dialable": counts["status"].get("NEW", 0), "held": counts["held"]}
+    return out
+
+
 def resolve_tree(tree):
     """Flatten `extends:` so the cockpit gets complete versions."""
     out = {}
@@ -488,6 +577,15 @@ class Handler(BaseHTTPRequestHandler):
             cfg = public_config()
             return self._json({"ok": True, "warnings": warnings, "scripts": cfg["scripts"],
                                "script_versions": cfg["script_versions"], "scripts_edited": cfg["scripts_edited"]})
+        if route in ("/api/import/preview", "/api/import"):
+            path, error = upload_to_csv(data)
+            if error:
+                return self._err(error)
+            try:
+                result = import_list(path, os.path.basename(str(data.get("filename") or "list.csv")), commit=route == "/api/import")
+            finally:
+                os.unlink(path)
+            return self._err(result["error"]) if result.get("error") else self._json(result)
         if route == "/api/lead/add":
             new_id, error = db.add_referral(None, data, CFG, agent)
             return self._err(error) if error else self._json({"ok": True, "id": new_id})

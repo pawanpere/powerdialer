@@ -123,15 +123,98 @@ function phoneModal() {
       '<p class="sub">You do not need it: the QR code next to every number already dials from the phone camera.</p>'));
 }
 
+/* ---- import a list ------------------------------------------------------------ */
+
+const FIELD_NAME = { company: "company", phone: "phone", tier: "tier", city: "city", state: "state", location: "location",
+  type: "type", ask_for: "ask for", first_name: "first name", last_name: "last name", dm_title: "title", why: "why",
+  est_drawings_month: "drawings a month", website: "website", flags: "flags", email: "email", whatsapp: "WhatsApp",
+  phone_source: "phone source", source: "source", language_pref: "language" };
+
+function listBlock(title, items, fmt) {
+  if (!items.length) return "";
+  return '<details class="obj"><summary>' + esc(title) + ' <span class="muted">' + items.length + "</span></summary>" +
+    '<ul class="imp-list">' + items.slice(0, 200).map((x) => "<li>" + fmt(x) + "</li>").join("") + "</ul></details>";
+}
+
+function importModal() {
+  closeMenus();
+  let file = null, content = "";
+  const shell = (body) => openModal('<div class="dh"><h2>Import a list</h2>' + closeX() + "</div>" + body, { wide: true });
+  const pick = (err) => {
+    shell('<p class="sub">A CSV or Excel file with one company per row. Columns are matched by name: company, phone (several phone columns are fine), ' +
+      "tier, city, state, type, ask for, why, drawings a month, website, flags, email. IndiaMART and LinkedIn exports work too. " +
+      "Nothing is imported until you've seen the preview. Importing again is safe: companies already called keep their history.</p>" +
+      '<label class="imp-drop" id="imp-drop"><input type="file" id="imp-file" accept=".csv,.xlsx,.xlsm,text/csv"><b>Choose a file</b><span class="muted">or drop it here</span></label>' +
+      '<p class="err" id="imp-err">' + esc(err || "") + "</p>");
+    const take = (f) => {
+      if (!f) return;
+      file = f;
+      $("imp-err").textContent = "";
+      $("imp-drop").innerHTML = "<b>" + esc(f.name) + '</b><span class="muted">reading...</span>';
+      const r = new FileReader();
+      r.onload = () => { content = String(r.result).split(",")[1] || ""; preview(); };
+      r.onerror = () => pick("That file could not be read.");
+      r.readAsDataURL(f);
+    };
+    $("imp-file").addEventListener("change", (e) => take(e.target.files[0]));
+    const drop = $("imp-drop");
+    drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+    drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); take(e.dataTransfer.files[0]); });
+  };
+  const preview = () => {
+    api("/api/import/preview", { filename: file.name, content }).then((d) => {
+      if (d.error) { pick(d.error); return; }
+      const k = d.kinds || {}, t = d.tiers || {};
+      const ignored = d.columns.filter((c) => !c.field).map((c) => c.header);
+      const used = d.columns.filter((c) => c.field).map((c) => esc(c.header) + (c.field !== c.header.toLowerCase() ? ' <span class="muted">as ' + esc(FIELD_NAME[c.field] || c.field) + "</span>" : ""));
+      shell('<p class="sub">' + esc(d.filename) + ": " + d.rows + " rows, " + d.leads + " companies" + (d.merged.length ? ", " + d.merged.length + " duplicate rows merged" : "") + ".</p>" +
+        '<div class="keys-table">' +
+        "<div><span>New to the list</span><b class=\"num\">" + d.new + "</b></div><div><span>Already on it, will be updated</span><b class=\"num\">" + d.already + "</b></div>" +
+        "<div><span>Tier A, B, C</span><b class=\"num\">" + (t.A || 0) + " / " + (t.B || 0) + " / " + (t.C || 0) + "</b></div>" +
+        "<div><span>Numbers: mobile, landline</span><b class=\"num\">" + (k.mobile || 0) + " / " + (k.landline || 0) + (k.tollfree ? " / " + k.tollfree + " toll-free" : "") + "</b></div>" +
+        "</div>" +
+        (d.no_phone_column ? '<p class="err">No phone column found, so every company will need a number before it can be called.</p>' : "") +
+        (d.dnc.length ? '<p class="err">' + d.dnc.length + " on your do-not-call list stay blocked: " + esc(d.dnc.join(", ")) + "</p>" : "") +
+        '<div class="imp-lists">' +
+        listBlock("Held for the defence or aerospace check", d.held, (x) => "<b>" + esc(x.company) + "</b> " + esc(x.reason)) +
+        listBlock("More than one number", d.multi, (x) => "<b>" + esc(x.company) + "</b> " + esc(x.numbers.join(", "))) +
+        listBlock("International numbers, not dialled", d.intl, (x) => "<b>" + esc(x.company) + "</b> " + esc(x.numbers.join(", "))) +
+        listBlock("No number yet", d.no_number, (x) => esc(x)) +
+        listBlock("Notes", d.notes, (x) => esc(x)) +
+        listBlock("Columns used", used, (x) => x) +
+        listBlock("Columns ignored", ignored, (x) => esc(x)) + "</div>" +
+        '<p class="err" id="imp-err"></p><div class="acts"><button class="btn primary" id="imp-go">Import ' + d.leads + " companies</button>" +
+        '<button class="btn quiet" id="imp-back">Choose another file</button></div>');
+      $("imp-back").addEventListener("click", () => pick());
+      $("imp-go").addEventListener("click", () => {
+        $("imp-go").disabled = true; $("imp-go").textContent = "Importing...";
+        api("/api/import", { filename: file.name, content }).then((r) => {
+          if (r.error) { $("imp-err").textContent = r.error; $("imp-go").disabled = false; $("imp-go").textContent = "Try again"; return; }
+          const x = r.result;
+          closeModal();
+          toast("ok", "<b>Imported " + esc(file.name) + ".</b> " + x.added + " added, " + x.refreshed + " updated" +
+            (x.kept_worked ? ", " + x.kept_worked + " already called left as they were" : "") + ". " + x.dialable + " ready to call.", { ms: 9000 });
+          emit("saved", {});
+          if (!S.cur && actions.nextLead) actions.nextLead();
+        });
+      });
+    });
+  };
+  pick();
+}
+
 export function wireModals() {
   $("main-menu").addEventListener("click", (e) => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const act = b.getAttribute("data-act");
     if (act === "lead") addLeadModal();
+    else if (act === "import") importModal();
     else if (act === "settings") settingsModal();
     else if (act === "phone") phoneModal();
     else if (act === "scripts" && actions.editScripts) { closeMenus(); actions.editScripts(); }
   });
   actions.addLead = addLeadModal;
+  actions.importList = importModal;
   actions.referral = () => addLeadModal({ referral: true });
 }

@@ -213,7 +213,8 @@ def to_lead(row, cfg):
         "language_pref": clean(row.get("language_pref")),
         "numbers": numbers,
         "international": international,
-        "hold_reason": hold_reason(row.get("flags"), imp.get("hold_if_flags_contain")),
+        "hold_reason": hold_reason(row.get("flags"), imp.get("hold_if_flags_contain"))
+                       or hold_reason(row.get("why"), imp.get("hold_if_flags_contain")),
     }
     report = []
     if volume is None and est_raw:

@@ -39,7 +39,8 @@ function renderQueue() {
     const leads = d.leads || [];
     if (!q) { S.data.queueCount = d.total != null ? d.total : leads.length; $("n-queue").textContent = S.data.queueCount || ""; if (d.window) actions.renderClock(d.window); }
     if (!leads.length) {
-      $("l-queue").innerHTML = '<p class="note">' + (q ? "Nothing matches “" + esc(q) + "”." : "Nobody to call right now. Callbacks and follow-ups are in their own tabs.") + "</p>";
+      $("l-queue").innerHTML = '<p class="note">' + (q ? "Nothing matches “" + esc(q) + "”." : "Nobody to call right now. Callbacks and follow-ups are in their own tabs.") + "</p>" +
+        (q ? "" : '<div class="acts" style="padding:0 8px"><button class="btn sm" data-import>Import a list</button></div>');
       return;
     }
     if (q) { $("l-queue").innerHTML = leads.map(queueRow).join(""); return; }
@@ -129,6 +130,7 @@ export function wireRails() {
     const r = e.target.closest("[data-lead]"); if (r) actions.openLead(+r.getAttribute("data-lead"));
   });
   $("q").addEventListener("input", debounce(renderQueue, 200));
+  $("l-queue").addEventListener("click", (e) => { if (e.target.closest("[data-import]")) actions.importList(); });
   on("saved", () => refreshAll());
   on("lead", () => { if (tab === "queue" || tab === "callbacks") document.querySelectorAll(".rail .row[data-lead]").forEach((r) => r.classList.toggle("on", !!S.cur && +r.getAttribute("data-lead") === S.cur.id)); });
   if (!renderers[tab]) tab = "queue";
