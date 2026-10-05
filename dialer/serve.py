@@ -933,6 +933,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"missed": [], "error": str(e)})
 
         if route.startswith("/api/recording/"):
+            if not DIALER.get("recording"):
+                return self._json({"error": "Recording is off on this server."}, 403)
             sid = route.rsplit("/", 1)[-1].removesuffix(".mp3")
             if not re.fullmatch(r"RE[0-9a-f]{32}", sid):
                 return self._json({"error": "not found"}, 404)
@@ -1275,6 +1277,9 @@ def main():
           + f"; mobiles {'ALLOWED' if db.ALLOW_MOBILE else 'blocked'}")
     print(f"  carrier   {'twilio credentials found: real calls' if not simulator else 'not configured: simulator mode (see TWILIO.md)'}")
     print(f"  auth      {'basic auth on' if os.environ.get('DIALER_PASSWORD') else 'OFF: local use only'}")
+    if DIALER.get("recording") and args.host not in ("127.0.0.1", "localhost", "::1") and not os.environ.get("DIALER_PASSWORD"):
+        DIALER["recording"] = False      # never record (or serve recordings) on a public server anyone can open
+        print("  recording OFF: this server is public and DIALER_PASSWORD is not set. Set it to turn recording on.")
     print(f"  serving   {args.host}:{args.port}\n")
 
     if not args.no_open and args.host in ("127.0.0.1", "localhost"):
