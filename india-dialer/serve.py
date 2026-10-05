@@ -470,6 +470,7 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/next":
             lead_id, reason = db.checkout(agent, CFG)
             return self._json({"lead": db.lead_payload(lead_id, CFG) if lead_id else None, "reason": reason,
+                               "has_leads": db.list_totals()["total"] > 0,
                                "window": policy.window_status(policy.to_ist(t), CFG.get("calling"))})
         if route == "/api/lead":
             lead = db.lead_payload(int(self._q("id") or 0), CFG)
@@ -479,7 +480,9 @@ class Handler(BaseHTTPRequestHandler):
             if q:
                 return self._json({"leads": db.search(q), "search": True})
             rows = db.queue(t, CFG, agent)
+            later, later_total = db.waiting(t, CFG, agent)
             return self._json({"leads": [dict(lead, group=policy.GROUP_LABEL[g]) for g, _r, lead in rows[:120]], "total": len(rows),
+                               "later": later, "later_total": later_total, "lists": db.list_totals(),
                                "window": policy.window_status(policy.to_ist(t), CFG.get("calling"))})
         if route == "/api/callbacks":
             return self._json({"callbacks": db.callbacks_list()})

@@ -160,3 +160,35 @@ class Queue(DbCase):
         self.assertTrue(lead["phones"][0]["blocked"])
         self.assertTrue(lead["dial_block"])
         self.assertNotIn("A New", self.order(db.now()))
+
+
+class NeverLooksEmpty(DbCase):
+    """Outside the windows the queue is empty, but the list must still show."""
+
+    def setUp(self):
+        super().setUp()
+        db.import_leads(collect([row(1, "A New", "98200 00001"), row(2, "B Held", "98200 00002", flags="DEFENSE/AERO CHECK")])[0],
+                        "list.csv", CFG)
+
+    def test_lunch_shows_every_lead_as_waiting(self):
+        lunch = policy.to_utc(ist("2026-10-05 13:30"))
+        self.assertEqual(db.queue(lunch, CFG), [])
+        later, total = db.waiting(lunch, CFG)
+        self.assertEqual(total, 2)
+        self.assertEqual({l["company"]: l["wait"] for l in later},
+                         {"A New": "when cold calls open", "B Held": "held for the defence check"})
+        reason = db._why_empty(lunch, CFG)
+        self.assertIn("Your 2 leads are all here", reason)
+        self.assertIn("2:30 pm", reason)
+        self.assertNotIn("Import", reason)
+
+    def test_totals_by_list(self):
+        totals = db.list_totals()
+        self.assertEqual((totals["total"], totals["open"]), (2, 2))
+        self.assertEqual(totals["lists"][0]["file"], "list.csv")
+
+    def test_only_an_empty_database_asks_for_a_list(self):
+        with db.connect() as con:
+            con.execute("DELETE FROM phones")
+            con.execute("DELETE FROM leads")
+        self.assertIn("Import a list", db._why_empty(policy.to_utc(ist("2026-10-05 11:00")), CFG))

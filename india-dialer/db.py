@@ -340,6 +340,50 @@ def queue(now_utc, cfg, agent=None, limit=None):
     return out[:limit] if limit else out
 
 
+def waiting(now_utc, cfg, agent=None, limit=150):
+    """Leads on the list that can't be handed out right now, with why and
+    when, best first. The list never looks empty when it isn't."""
+    cal = (cfg or {}).get("calling")
+    out = []
+    with connect() as con:
+        blocked = dnc_keys(con)
+        due = _followup_due_ids(con, now_utc, cfg)
+        for r in con.execute(f"SELECT * FROM leads WHERE status IN {DIALABLE} ORDER BY rank DESC, id").fetchall():
+            lead = dict(r)
+            if ("company:" + lead["company_key"]) in blocked or not _dialable_phones(con, lead["id"], blocked):
+                continue
+            group, reason = policy.group_for(lead, now_utc, cal, lead["id"] in due)
+            if group is not None:
+                continue
+            nxt = _dt(lead["next_action_at"])
+            if reason == "outside window" and lead["attempts"] and nxt and nxt > now_utc:
+                reason = "retry later"
+            when = policy.to_ist(nxt).strftime("%a %-d %b, %-I:%M %p").replace("AM", "am").replace("PM", "pm") if nxt else ""
+            lead["wait"] = {
+                "outside window": "when cold calls open",
+                "outside hours": "after 09:00 IST",
+                "held": "held for the defence check",
+                "skipped for now": "skipped for a couple of hours",
+                "callback later": "callback " + when,
+                "retry later": "next try " + when,
+                "retry in the other half of the day": "next try in the other half of the day",
+                "in pipeline": "in the sample pipeline",
+            }.get(reason, reason)
+            out.append(lead)
+    return out[:limit], len(out)
+
+
+def list_totals():
+    """How many leads came from each imported list, and how many are on file in all."""
+    with connect() as con:
+        lists = [dict(r) for r in con.execute(
+            "SELECT COALESCE(NULLIF(source_file, ''), 'added by hand') file, COUNT(*) leads, MAX(created_at) at "
+            "FROM leads GROUP BY 1 ORDER BY at DESC")]
+        total = con.execute("SELECT COUNT(*) FROM leads").fetchone()[0]
+        callable_ = con.execute(f"SELECT COUNT(*) FROM leads WHERE status IN {DIALABLE}").fetchone()[0]
+    return {"total": total, "open": callable_, "lists": lists}
+
+
 def checkout(agent, cfg, now_utc=None):
     """(lead_id, None) for the next lead, or (None, reason). The lead this
     agent already has open comes back first, so a reload never loses it."""
@@ -362,16 +406,21 @@ def _why_empty(t, cfg):
     cal = (cfg or {}).get("calling")
     ist = policy.to_ist(t)
     status = policy.window_status(ist, cal)
-    with connect() as con:
-        waiting = con.execute("SELECT COUNT(*) FROM leads WHERE status='NEW' AND (hold=0 OR cleared_at IS NOT NULL)").fetchone()[0]
+    totals = list_totals()
+    if not totals["total"]:
+        return "No leads yet. Import a list to start."
+    safe = f"Your {totals['total']} leads are all here, {totals['open']} still to work. "
+    opens = f" Cold calls open {status['next_open']}." if status.get("next_open") else ""
     if not status["legal"]:
-        return "Outside calling hours (09:00 to 21:00 IST)." + (f" Cold calls open {status['next_open']}." if status.get("next_open") else "")
-    if status["tier"] in ("closed", "lunch", "off"):
-        return f"{status['label']}. Callbacks and follow-ups still come through." + (
-            f" Cold calls open {status['next_open']}." if status.get("next_open") else "")
-    if waiting:
-        return "Every lead left is waiting for its next try, a callback time, or a hold to be cleared."
-    return "Queue is empty. Import a list, or add a lead from the Queue rail."
+        return safe + "Nothing can be dialled outside 09:00 to 21:00 IST." + opens
+    if status["tier"] == "closed":
+        return safe + f"{status['day_note'] or 'Closed'}: no cold calls today. Callbacks still come through." + opens
+    if status["tier"] in ("lunch", "off"):
+        return safe + f"{status['label']}, so the queue waits. Callbacks and follow-ups still come through," \
+                      " and you can open any lead from the list on the left to call it by hand." + opens
+    if totals["open"]:
+        return safe + "Each one is waiting for its next try, a callback time, or a hold to be cleared. The list on the left shows when."
+    return safe + "Every lead has been worked to the end. Import a new list to keep going."
 
 
 def release(lead_id, agent=None):

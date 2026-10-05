@@ -84,14 +84,15 @@ function loadLead(lead, opts) {
 }
 actions.loadLead = loadLead;
 
-function showEmpty(reason) {
+function showEmpty(reason, hasLeads) {
   S.cur = null;
   closeWrap();
   $("lead").hidden = true; $("empty").hidden = false;
-  $("e-title").textContent = S.session.paused ? "Paused: " + S.session.paused.toLowerCase() : "Nothing to call right now";
+  $("e-title").textContent = S.session.paused ? "Paused: " + S.session.paused.toLowerCase() : hasLeads === false ? "No leads yet" : "Nothing in the queue right now";
   $("e-text").textContent = S.session.paused ? "Your lead went back to the queue. Callbacks and follow-ups are on the left." : reason || "";
   $("e-acts").innerHTML = S.session.paused ? '<button class="btn primary" data-act="resume">Resume <kbd>p</kbd></button>'
-    : '<button class="btn" data-act="refresh">Check again</button><button class="btn quiet" data-act="import">Import a list</button><button class="btn quiet" data-act="lead">Add a lead</button>';
+    : hasLeads === false ? '<button class="btn primary" data-act="import">Import a list</button><button class="btn quiet" data-act="lead">Add a lead</button>'
+    : '<button class="btn" data-act="refresh">Check again</button><button class="btn quiet" data-act="list">Show the list</button>';
   setState("idle");
   emit("lead", null);
 }
@@ -100,7 +101,7 @@ function nextLead() {
   if (S.session.paused) { showEmpty(); return; }
   api(withAgent("/api/next")).then((d) => {
     renderClock(d.window);
-    if (d.lead) loadLead(d.lead); else showEmpty(d.reason);
+    if (d.lead) loadLead(d.lead); else showEmpty(d.reason, d.has_leads);
     refreshAll();
   }).catch(() => { showEmpty("The server is not answering. Is serve.py still running?"); });
 }
@@ -306,7 +307,7 @@ function renderClock(w) {
   const parts = ["<b>" + esc(w.ist) + " IST</b>", '<span class="' + cls + '">' + esc(w.label) + "</span>"];
   if (w.next_open) parts.push("cold calls open " + esc(w.next_open));
   if (w.day === "saturday" || w.day === "holiday" || w.day === "sunday") parts.push('<span class="warn">' + esc(w.day_note) + "</span>");
-  if (S.data.queueCount != null) parts.push(S.data.queueCount + " to call now");
+  if (S.data.queueCount != null) parts.push(S.data.queueCount + " to call now" + (S.data.listTotal ? " of " + S.data.listTotal + " leads" : ""));
   $("clock-line").innerHTML = parts.join(" · ");
 }
 actions.renderClock = renderClock;
@@ -422,6 +423,7 @@ function wire() {
     const act = b.getAttribute("data-act");
     if (act === "resume") resume(); else if (act === "refresh") nextLead(); else if (act === "lead") actions.addLead();
     else if (act === "import") actions.importList();
+    else if (act === "list") { selectTab("queue"); document.body.classList.add("rail-open"); }
   });
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".menu-wrap")) closeMenus();

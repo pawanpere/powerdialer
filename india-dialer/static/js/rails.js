@@ -22,12 +22,13 @@ function loading(id) { if (!$(id).children.length) $(id).innerHTML = skel(); }
 
 /* ---- queue ---------------------------------------------------------------- */
 
-function queueRow(l) {
+function queueRow(l, wait) {
   const bits = ["Tier " + esc(l.tier)];
+  if (wait) bits.push(esc(wait));
   if (l.city) bits.push(esc(l.city));
   if (l.attempts) bits.push("try " + (l.attempts + 1));
   if (l.last_outcome) bits.push(esc(outcome(l.last_outcome).label.toLowerCase()));
-  if (l.next_action_type === "callback" && l.next_action_at) bits.push("call back " + esc(istWhen(parseUTC(l.next_action_at))));
+  if (!wait && l.next_action_type === "callback" && l.next_action_at) bits.push("call back " + esc(istWhen(parseUTC(l.next_action_at))));
   return '<button class="row' + (S.cur && S.cur.id === l.id ? " on" : "") + '" data-lead="' + l.id + '">' +
     '<span class="t1">' + esc(l.company) + '</span><span class="t2">' + bits.join(" · ") + "</span></button>";
 }
@@ -38,17 +39,33 @@ function renderQueue() {
   api(withAgent("/api/queue" + (q ? "?q=" + encodeURIComponent(q) : ""))).then((d) => {
     const leads = d.leads || [];
     if (!q) { S.data.queueCount = d.total != null ? d.total : leads.length; $("n-queue").textContent = S.data.queueCount || ""; if (d.window) actions.renderClock(d.window); }
-    if (!leads.length) {
-      $("l-queue").innerHTML = '<p class="note">' + (q ? "Nothing matches “" + esc(q) + "”." : "Nobody to call right now. Callbacks and follow-ups are in their own tabs.") + "</p>" +
-        (q ? "" : '<div class="acts" style="padding:0 8px"><button class="btn sm" data-import>Import a list</button></div>');
+    if (q) {
+      $("l-queue").innerHTML = leads.length ? leads.map(queueRow).join("") : '<p class="note">Nothing matches “' + esc(q) + "”.</p>";
       return;
     }
-    if (q) { $("l-queue").innerHTML = leads.map(queueRow).join(""); return; }
-    let h = "", group = "";
+    const lists = d.lists || { total: 0, lists: [] }, later = d.later || [], w = d.window || {};
+    S.data.listTotal = lists.total;
+    if (d.window) actions.renderClock(d.window);
+    if (!lists.total) {
+      $("l-queue").innerHTML = '<p class="note"><b>No leads yet.</b>Import a CSV or Excel list to start calling.</p>' +
+        '<div class="acts" style="padding:0 8px"><button class="btn sm primary" data-import>Import a list</button></div>';
+      return;
+    }
+    let h = '<p class="lists-line">' + lists.total + " leads from " + lists.lists.length + (lists.lists.length === 1 ? " list" : " lists") +
+      ' <button class="btn quiet sm" data-import>Import another</button></p>';
+    let group = "";
     leads.forEach((l) => {
       if (l.group !== group) { group = l.group; h += '<p class="group-h">' + esc(group) + "</p>"; }
       h += queueRow(l);
     });
+    if (later.length) {
+      const why = !leads.length && w.tier && w.tier !== "power" && w.tier !== "soft"
+        ? esc(w.label) + (w.next_open ? ", cold calls open " + esc(w.next_open) : "") + ". Open any lead to call it by hand."
+        : "Waiting for a time, a retry or a hold.";
+      h += '<p class="group-h">Later<span>' + (d.later_total || later.length) + "</span></p>" +
+        '<p class="note later-note">' + why + "</p>" + later.map((l) => queueRow(l, l.wait)).join("");
+    }
+    if (!leads.length && !later.length) h += '<p class="note">Every lead on your lists has been worked to the end.</p>';
     $("l-queue").innerHTML = h;
   });
 }
