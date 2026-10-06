@@ -1027,10 +1027,13 @@ class Handler(BaseHTTPRequestHandler):
             if not phone:
                 return self._json({"error": "Enter a 10-digit US or Canadian number."}, 400)
             tz, tz_name = number_tz(phone) if route == "/api/manual" else (None, "")
+            force = bool(data.get("force"))
             lead, reason = db.checkout_specific(phone, self._agent(data), tz_offset=tz, tz_name=tz_name,
-                                                returning=bool(data.get("returning")))
+                                                returning=bool(data.get("returning")), force=force)
             if reason:
-                return self._json({"error": reason}, 409)
+                return self._json({"error": reason, "can_force": any(k in reason for k in db.OVERRIDABLE)}, 409)
+            if force:
+                print(f"  OVERRIDE  {phone} dialed again by {self._agent(data)} (same-day rule or cap lifted)")
             return self._json({"ok": True, "lead": lead_payload(lead),
                                "tz_known": route != "/api/manual" or tz is not None,
                                "stats": db.stats(self._agent(data))})

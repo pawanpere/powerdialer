@@ -427,6 +427,13 @@ function openLead(phone, route, extra) {
   cancelCountdown();
   const release = S.cur && S.state === "READY" && S.cur.phone !== phone ? api("/api/release", { phone: S.cur.phone }) : Promise.resolve();
   return release.then(() => api(route || "/api/checkout", Object.assign({ phone, agent: S.agent }, extra || {}))).then((d) => {
+    if (d.error && d.can_force) {
+      toast("warn", esc(d.error) + " You can still call them.", {
+        ms: 12000, actions: [{ html: "Dial anyway", run: () => openLead(phone, route, Object.assign({}, extra || {}, { force: true })) }]
+      });
+      if (!S.cur) nextLead();
+      return false;
+    }
     if (d.error || !d.lead) { toast("error", esc(d.error || "Could not open that lead.")); if (!S.cur) nextLead(); return false; }
     renderStats(d.stats);
     loadLead(d.lead, { handPicked: true });
