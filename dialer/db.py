@@ -192,6 +192,13 @@ CREATE TABLE IF NOT EXISTS campaign_leads (
   PRIMARY KEY (campaign_id, phone)
 );
 CREATE INDEX IF NOT EXISTS idx_campaign_leads_phone ON campaign_leads(phone);
+
+-- Pipeline timeline: stage changes, follow-ups, transcripts processed, email
+-- drafts and invite links logged by Claude or by hand.
+CREATE TABLE IF NOT EXISTS lead_events (
+  id INTEGER PRIMARY KEY, phone TEXT NOT NULL, at TEXT, kind TEXT, text TEXT DEFAULT '', by TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_lead_events_phone ON lead_events(phone, at);
 """
 
 # Columns added after the first deploy; applied idempotently by init().
@@ -242,6 +249,16 @@ MIGRATIONS = [
     ("dispositions", "recording_sid", "TEXT DEFAULT ''"),
     ("leads", "deleted_at", "TEXT"),
     ("leads", "prev_status", "TEXT"),
+    # Pipeline and the call agent
+    ("leads", "stage", "TEXT DEFAULT ''"),
+    ("leads", "stage_at", "TEXT"),
+    ("leads", "follow_up_at", "TEXT"),
+    ("leads", "follow_up_note", "TEXT DEFAULT ''"),
+    ("dispositions", "transcript", "TEXT"),
+    ("dispositions", "transcript_status", "TEXT DEFAULT ''"),   # queued | working | done | failed | ''
+    ("dispositions", "transcript_error", "TEXT DEFAULT ''"),
+    ("dispositions", "ai_summary", "TEXT DEFAULT ''"),
+    ("dispositions", "processed_at", "TEXT"),
 ]
 
 
@@ -855,7 +872,8 @@ def history(phone, limit=20):
     with connect() as con:
         return [dict(r) for r in con.execute(
             "SELECT id, disposition, notes, agent, duration, at, objections, pain, booked_for, "
-            "show_status, sale, attempt_no, script_version, recording_sid FROM dispositions "
+            "show_status, sale, attempt_no, script_version, recording_sid, transcript, transcript_status, "
+            "transcript_error, ai_summary FROM dispositions "
             "WHERE phone=? ORDER BY at DESC, id DESC LIMIT ?", (phone, limit))]
 
 

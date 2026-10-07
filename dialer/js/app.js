@@ -19,6 +19,7 @@ import { selectTab, refreshQueue, refreshCallbacks, refreshCalls, refreshInbox, 
 import { agentPicker, manualModal, shortcutsModal, logModal, settingsModal, applyTheme } from "./modals.js";
 import { wireCampaigns, loadListModal, manageModal, deleteLeads, refreshTarget } from "./campaigns.js";
 import { openAnalytics } from "./analytics.js";
+import { wirePipeline } from "./pipeline.js";
 
 let carrier = simulatorCarrier();
 let activeCall = null, incoming = null;
@@ -902,6 +903,7 @@ function boot() {
     say("Signed in as " + esc(S.agentName) + " (" + esc(S.agent) + ")");
     emit("cfg", S.cfg);
     wireCampaigns();
+    wirePipeline();
     if (S.cfg.live) api(withAgent("/api/token")).then((d) => { if (d && d.token) attachCarrier(d.token); else simMode(); }).catch(simMode);
     else simMode();
     nextLead();
