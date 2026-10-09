@@ -98,6 +98,14 @@ TOOLS = [
                     "Do this last, after the stage, follow-up, details and any draft are done.",
      "inputSchema": {"type": "object", "properties": {"call_id": {"type": "integer"}, "summary": {"type": "string"}},
                      "required": ["call_id", "summary"]}},
+    {"name": "list_callbacks",
+     "description": "Every scheduled callback (a time the prospect asked to be called back), soonest first, "
+                    "with the note that set it and whether it's overdue. callback_at is UTC.",
+     "inputSchema": {"type": "object", "properties": {"campaign": CAMPAIGN}}},
+    {"name": "list_bookings",
+     "description": "Booked calls: upcoming ones first (booked_for is UTC), then past ones that still need "
+                    "a show / no-show / sale marked (needs_status).",
+     "inputSchema": {"type": "object", "properties": {"campaign": CAMPAIGN}}},
     {"name": "list_campaigns",
      "description": "Campaigns with lead counts and today's dials.",
      "inputSchema": {"type": "object", "properties": {}}},
@@ -124,6 +132,10 @@ def run_tool(name, a):
         return call("POST", "/api/agent/event", {"phone": a["phone"], "kind": a.get("kind", "note"), "text": a.get("text", "")})
     if name == "mark_call_processed":
         return call("POST", "/api/agent/processed", {"id": a["call_id"], "summary": a.get("summary", "")})
+    if name == "list_callbacks":
+        return call("GET", "/api/callbacks", campaign=camp)
+    if name == "list_bookings":
+        return call("GET", "/api/bookings", campaign=camp)
     if name == "list_campaigns":
         return call("GET", "/api/campaigns")
     return {"error": f"unknown tool {name}"}

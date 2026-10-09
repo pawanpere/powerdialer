@@ -1,6 +1,6 @@
 ---
 name: process-calls
-description: Work the PXL Kraft dialer's after-call queue. Reads new call transcripts, moves each lead through the pipeline, saves contact details, creates trial invite links on the PXL Kraft platform, and drops ready-to-send follow-up emails into Gmail Drafts (never sends). Also drafts nudges for follow-ups that are due. Use when Pawan says "process my calls", "go through today's calls", "do my follow-ups", "work the pipeline", or runs /process-calls.
+description: Work the PXL Kraft dialer's after-call queue. Reads new call transcripts, moves each lead through the pipeline, saves contact details, creates trial invite links on the PXL Kraft platform, and drops ready-to-send follow-up emails into Gmail Drafts (never sends). Also drafts nudges for follow-ups that are due and writes today's agenda: who to call, callbacks, booked calls, what needs marking. Use when Pawan says "process my calls", "go through today's calls", "do my follow-ups", "work the pipeline", "what's on today", "who should I call", or runs /process-calls.
 ---
 
 # Process calls
@@ -11,7 +11,7 @@ Your job: everything after the call, so he only has to read drafts and press sen
 
 ## Tools
 
-- **Dialer connector** (MCP server `dialer`): `list_new_calls`, `get_lead`, `list_pipeline`, `list_followups_due`, `set_stage`, `set_follow_up`, `update_lead_details`, `log_event`, `mark_call_processed`, `list_campaigns`.
+- **Dialer connector** (MCP server `dialer`): `list_new_calls`, `get_lead`, `list_pipeline`, `list_followups_due`, `list_callbacks`, `list_bookings`, `set_stage`, `set_follow_up`, `update_lead_details`, `log_event`, `mark_call_processed`, `list_campaigns`.
 - **Gmail connector**: use `create_draft` only. Never `send_message`, never anything that sends. If no Gmail connector is available, write each draft into the chat instead.
 - **Trial invite links**: made by running this from a shell. It sends nothing; it only returns the link.
   ```
@@ -61,6 +61,26 @@ Call `list_followups_due`. For each lead, read its recent calls and timeline, th
 
 Log every draft with `log_event` and move each follow-up date on.
 
+## Part 3: today's agenda
+
+Pawan is in India (IST) and calls US prospects, so his calling session runs in the IST evening and night. Every time shown to him goes in both IST and the prospect's local time, e.g. "7:00pm IST (9:30am ET)". The dialer stores UTC.
+
+Gather:
+- `list_bookings`: calls booked for the next 24 hours, and past bookings with `needs_status` (he must mark showed / no-show / sale in the dialer's Bookings tab).
+- `list_callbacks`: callbacks due today and overdue ones.
+- `list_followups_due` plus what you just did in Parts 1 and 2: leads whose note says to call (e.g. "call back, get email", "call them").
+- `list_pipeline` with no stage: hot leads (interested, signed_up, using) with no follow-up set.
+- `list_campaigns`: open and untouched leads per campaign, so he knows which campaign to dial for new leads.
+
+Write the agenda as a short plan, in this order:
+1. **Booked calls today**, with time, who, company, and one line of prep from their calls and notes.
+2. **Call first**: callbacks and call-type follow-ups, ordered by time. For each: time window, company, who to ask for (a name from the transcript, e.g. "ask for Doug"), why, and the opening line to use.
+3. **Hot leads to nudge**, if any have no follow-up.
+4. **Needs you**: bookings to mark, garbled emails, drafts waiting in Gmail.
+5. **Then dial**: which campaign to work for fresh leads, and how many are untouched.
+
+Keep it scannable; skip any section that's empty. Don't invent times: if a callback has no time, say "anytime in their business hours".
+
 ## Email rules (Pawan's)
 
 - **Short:** 2 to 4 sentences, casual, written like one person to another. Use their first name.
@@ -85,4 +105,4 @@ Report to Pawan in a few lines:
 - stage changes;
 - anything that needs him: a garbled email address, a hot lead to call now, or the platform being offline.
 
-Remind him the drafts are waiting in Gmail Drafts.
+Then give the Part 3 agenda. Remind him the drafts are waiting in Gmail Drafts.
