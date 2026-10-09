@@ -37,10 +37,12 @@ Call `list_new_calls` (repeat until it's empty; it returns the oldest first). Fo
    - **call_booked:** they agreed to a call with a date.
    - **lost:** clear no, not a fit (no PPAP work, ITAR/defence, out of business), or they asked not to be contacted.
    - **No stage:** gatekeeper or voicemail calls, unless the lead is already in the pipeline.
-4. **Trial invite** (only when they said yes to trying it and you have their email):
+4. **Trial invite.** Make one for every lead who agreed to try it, and for an interested lead who gave an email, unless their timeline already has an `invite` event from the last 7 days (invites last 7 days).
    - Run the trial link command with their email and company.
-   - Then `create_draft` in Gmail: to their email, with the subject set to their first name only.
-   - Log it twice: `log_event` kind `invite` (with the link), and `log_event` kind `draft` (with "Gmail draft to X, subject Y").
+   - **Attach it to the lead:** `log_event` kind `invite` with the full link, so it shows on the lead's timeline in the dialer.
+   - Then `create_draft` in Gmail: to their email, with the subject set to their first name only, and the link in the body.
+   - Log the draft too: `log_event` kind `draft` ("Gmail draft to X, subject Y").
+   - Set the stage to `invite_sent`.
 5. **Other follow-up emails** when the call earned one: they asked for "send me something", or interested with no email yet but a known address. Draft the same way and log kind `draft`.
 6. **Set the follow-up date** with `set_follow_up`, in UTC `YYYY-MM-DD HH:MM`, at about 10am on the prospect's clock (their time zone is on the lead):
    - **invite_sent:** in 2 business days, note "check they signed up".

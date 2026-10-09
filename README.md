@@ -181,7 +181,32 @@ Call Booked, Sales Calls Done, Sales, Sales $, Notes`.
   `claude mcp add dialer --scope user -- python3 /path/to/dialer/mcp_server.py`;
   it reads `DIALER_URL` and the password from `DIALER_PASSWORD` or
   `~/.pxl-dialer-password`. Transcripts and the connector's endpoints stay off
-  on a public server until `DIALER_PASSWORD` is set.
+  on a public server until `DIALER_PASSWORD` is set. It can also list
+  callbacks and bookings, which the daily agenda uses.
+
+### Claude's daily routine
+
+Recordings stay in Twilio (the dialer keeps only the recording id and streams
+the audio on play); transcripts and the pipeline live in the dialer's database
+on the Railway volume. Claude works from those through the connector:
+
+- **`/process-calls`** (the skill in `claude/process-calls/`) reads every
+  unprocessed transcript, saves names, emails and PPAP volume, moves the stage,
+  sets the next follow-up, makes a PXL Kraft trial invite link for each lead
+  who agreed to try it, attaches the link to the lead (an `invite` event on its
+  timeline), and puts the follow-up email with the link in Gmail Drafts. Then it
+  drafts nudges for follow-ups that are due, and ends with today's agenda:
+  booked calls, who to call first (IST and their time, who to ask for, the
+  opening line), hot leads, what needs marking, and which campaign to dial.
+  It never sends email and never dials.
+- **Every weekday at 6pm IST** a Claude Code scheduled task runs it before the
+  US session (prompt in `claude/daily-briefing.md`). It runs only while the
+  Claude app is open; a missed run starts when the app next opens.
+- **Trial links** come from the PXL Kraft platform (`~/pxlkraft-ppap`) through
+  `claude/process-calls/make_trial_link.py`. They use the platform's app URL,
+  or `PXL_PUBLIC_URL` if set. While the platform only runs on the Mac
+  (localhost), a link is still made and attached to the lead, but the draft
+  gets `[trial link]` instead, because a prospect can't open a localhost link.
 
 ## Deploying on Railway
 

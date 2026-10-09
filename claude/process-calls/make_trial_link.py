@@ -6,10 +6,14 @@ Run from the platform repo so its settings and database are used:
 
 Prints JSON: {"company": ..., "limit": 2, "links": [{"email": ..., "link": ...}]}.
 Creating the link sends nothing; the link goes into the email draft.
+The links use the platform's app URL, or PXL_PUBLIC_URL when that is set
+(e.g. a tunnel or the deployed address), since the invite token works on any
+address that serves this platform.
 --dry-run makes the link inside a transaction and rolls it back (for testing).
 """
 import argparse
 import json
+import os
 import sys
 
 from pxlkraft.core import trials
@@ -32,8 +36,11 @@ def main():
         if owner is None:
             sys.exit(json.dumps({"error": "no platform owner found (PXL_OWNER_EMAILS)"}))
         out = trials.create(session, owner, emails=a.email, company_name=a.company, limit=a.limit)
-        out["app_url"] = settings().app_url
-        out["reachable_by_prospects"] = not settings().app_url.startswith(("http://localhost", "http://127.0.0.1"))
+        base = (os.environ.get("PXL_PUBLIC_URL") or settings().app_url).rstrip("/")
+        for item in out.get("links", []):
+            item["link"] = base + "/invite/" + item["link"].rsplit("/invite/", 1)[-1]
+        out["app_url"] = base
+        out["reachable_by_prospects"] = not base.startswith(("http://localhost", "http://127.0.0.1"))
         if a.dry_run:
             session.rollback()
             out["dry_run"] = True
